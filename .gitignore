@@ -24,6 +24,7 @@ tools/extractdwrflnfo
 
 # Lazarus local files (user-specific info)
 *.lps
+.lazarus-nix/
 
 # Lazarus backups and unit output folders.
 # These can be changed by user in Lazarus/project options.
