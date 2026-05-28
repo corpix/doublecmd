@@ -3699,94 +3699,118 @@ end;
 procedure TMainCommands.cm_ReverseOrder(const Params: array of string);
 begin
   with frmMain.ActiveFrame do
+  begin
     Sorting := ReverseSortDirection(Sorting);
+    SaveDirectorySettings;
+  end;
 end;
 
 procedure TMainCommands.cm_LeftReverseOrder(const Params: array of string);
 begin
   with frmMain.FrameLeft do
+  begin
     Sorting := ReverseSortDirection(Sorting);
+    SaveDirectorySettings;
+  end;
 end;
 
 procedure TMainCommands.cm_RightReverseOrder(const Params: array of string);
 begin
   with frmMain.FrameRight do
+  begin
     Sorting := ReverseSortDirection(Sorting);
+    SaveDirectorySettings;
+  end;
 end;
 
 procedure TMainCommands.cm_SortByName(const Params: array of string);
 begin
   DoSortByFunctions(frmMain.ActiveFrame, [fsfNameNoExtension]);
+  frmMain.ActiveFrame.SaveDirectorySettings;
 end;
 
 procedure TMainCommands.cm_SortByExt(const Params: array of string);
 begin
   DoSortByFunctions(frmMain.ActiveFrame, [fsfExtension]);
+  frmMain.ActiveFrame.SaveDirectorySettings;
 end;
 
 procedure TMainCommands.cm_SortBySize(const Params: array of string);
 begin
   DoSortByFunctions(frmMain.ActiveFrame, [fsfSize]);
+  frmMain.ActiveFrame.SaveDirectorySettings;
 end;
 
 procedure TMainCommands.cm_SortByDate(const Params: array of string);
 begin
   DoSortByFunctions(frmMain.ActiveFrame, [fsfModificationTime]);
+  frmMain.ActiveFrame.SaveDirectorySettings;
 end;
 
 procedure TMainCommands.cm_SortByAttr(const Params: array of string);
 begin
   DoSortByFunctions(frmMain.ActiveFrame, [fsfAttr]);
+  frmMain.ActiveFrame.SaveDirectorySettings;
 end;
 
 procedure TMainCommands.cm_LeftSortByName(const Params: array of string);
 begin
   DoSortByFunctions(frmMain.FrameLeft, [fsfNameNoExtension]);
+  frmMain.FrameLeft.SaveDirectorySettings;
 end;
 
 procedure TMainCommands.cm_LeftSortByExt(const Params: array of string);
 begin
   DoSortByFunctions(frmMain.FrameLeft, [fsfExtension]);
+  frmMain.FrameLeft.SaveDirectorySettings;
 end;
 
 procedure TMainCommands.cm_LeftSortBySize(const Params: array of string);
 begin
   DoSortByFunctions(frmMain.FrameLeft, [fsfSize]);
+  frmMain.FrameLeft.SaveDirectorySettings;
 end;
 
 procedure TMainCommands.cm_LeftSortByDate(const Params: array of string);
 begin
   DoSortByFunctions(frmMain.FrameLeft, [fsfModificationTime]);
+  frmMain.FrameLeft.SaveDirectorySettings;
 end;
 
 procedure TMainCommands.cm_LeftSortByAttr(const Params: array of string);
 begin
   DoSortByFunctions(frmMain.FrameLeft, [fsfAttr]);
+  frmMain.FrameLeft.SaveDirectorySettings;
 end;
 
 procedure TMainCommands.cm_RightSortByName(const Params: array of string);
 begin
   DoSortByFunctions(frmMain.FrameRight, [fsfNameNoExtension]);
+  frmMain.FrameRight.SaveDirectorySettings;
 end;
 
 procedure TMainCommands.cm_RightSortByExt(const Params: array of string);
 begin
   DoSortByFunctions(frmMain.FrameRight, [fsfExtension]);
+  frmMain.FrameRight.SaveDirectorySettings;
 end;
 
 procedure TMainCommands.cm_RightSortBySize(const Params: array of string);
 begin
   DoSortByFunctions(frmMain.FrameRight, [fsfSize]);
+  frmMain.FrameRight.SaveDirectorySettings;
 end;
 
 procedure TMainCommands.cm_RightSortByDate(const Params: array of string);
 begin
   DoSortByFunctions(frmMain.FrameRight, [fsfModificationTime]);
+  frmMain.FrameRight.SaveDirectorySettings;
 end;
 
 procedure TMainCommands.cm_RightSortByAttr(const Params: array of string);
 begin
   DoSortByFunctions(frmMain.FrameRight, [fsfAttr]);
+  frmMain.FrameRight.SaveDirectorySettings;
 end;
 
 { Command to request to sort a frame with a column with a defined order.
@@ -3835,6 +3859,7 @@ begin
   NewSorting[0].SortFunctions[0] := FileFunctions[0];
   NewSorting[0].SortDirection := WantedSortDirection;
   WantedFileView.Sorting := NewSorting;
+  WantedFileView.SaveDirectorySettings;
 end;
 
 procedure TMainCommands.cm_MultiRename(const Params: array of string);
@@ -5712,4 +5737,3 @@ begin
 end;
 
 end.
-

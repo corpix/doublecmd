@@ -41,6 +41,7 @@ type
     cbOperationSizeFormat: TComboBox;
     cbUpdatedFilesPosition: TComboBox;
     cbNewFilesPosition: TComboBox;
+    cbSaveDirectorySettings: TCheckBox;
     cbSortMethod: TComboBox;
     cbCaseSensitivity: TComboBox;
     cbSortFolderMode: TComboBox;
@@ -199,6 +200,7 @@ begin
   edGiga.Text := Trim(gSizeDisplayUnits[fsfPersonalizedGiga]);
   edTera.Text := Trim(gSizeDisplayUnits[fsfPersonalizedTera]);
   cbDateTimeFormat.Text := gDateTimeFormat;
+  cbSaveDirectorySettings.Checked := gSaveDirectorySettings;
   lblDateTimeExample.Caption := FormatDateTime(cbDateTimeFormat.Text, Now);
 
   lblFileSizeExample.Constraints.MinWidth := lblFileSizeExample.Canvas.TextWidth(CnvFormatFileSize(cFileSizeExample, fsfKilo, speNumberOfDigitsFile.MaxValue) + 'WWW');
@@ -234,6 +236,7 @@ begin
     1: gUpdatedFilesPosition := ufpSameAsNewFiles;
     2: gUpdatedFilesPosition := ufpSortedPosition;
   end;
+  gSaveDirectorySettings := cbSaveDirectorySettings.Checked;
   gFileSizeFormat := TFileSizeFormat(cbFileSizeFormat.ItemIndex);
   gHeaderSizeFormat := TFileSizeFormat(cbHeaderSizeFormat.ItemIndex);
   gFooterSizeFormat := TFileSizeFormat(cbFooterSizeFormat.ItemIndex);
@@ -286,4 +289,3 @@ begin
 end;
 
 end.
-

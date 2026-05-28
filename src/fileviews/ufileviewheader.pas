@@ -456,6 +456,7 @@ begin
 
     AddOrUpdateSorting(NewSorting, SortFunctions, SortingDirection);
     FFileView.Sorting:= NewSorting;
+    FFileView.SaveDirectorySettings;
   end;
   inherited SectionClick(Section);
 end;
@@ -617,4 +618,3 @@ begin
 end;
 
 end.
-

@@ -450,6 +450,8 @@ type
     procedure LoadConfiguration(AConfig: TXmlConfig; ANode: TXmlNode); virtual;
     procedure SaveConfiguration(AConfig: TXmlConfig; ANode: TXmlNode; ASaveHistory:boolean); virtual;
 
+    procedure ApplyDirectorySettings;
+    procedure SaveDirectorySettings;
     procedure UpdateView;
     procedure ApplySettings;
     procedure UpdateColor; virtual; abstract;
@@ -613,7 +615,8 @@ uses
   uShellExecute, fMaskInputDlg, uMasks, DCOSUtils, uOSUtils, DCStrUtils,
   uDCUtils, uDebug, uLng, uShowMsg, uFileSystemFileSource, uFileSourceUtil,
   uFileViewNotebook, uSearchTemplate, uKeyboard, uFileFunctions,
-  fMain, uSearchResultFileSource, uFileSourceProperty, uVfsModule, uFileViewWithPanels;
+  fMain, uSearchResultFileSource, uFileSourceProperty, uVfsModule, uFileViewWithPanels,
+  uDirectorySettings;
 
 const
   MinimumReloadInterval  = 1000; // 1 second
@@ -2126,6 +2129,41 @@ begin
   end;
 end;
 
+procedure TFileView.ApplyDirectorySettings;
+var
+  DirectorySortings: TFileSortings;
+  AFileSource: IFileSource;
+begin
+  if not gSaveDirectorySettings or not Assigned(gDirectorySettings) or
+     (FileSourcesCount = 0) then
+    Exit;
+
+  AFileSource := FileSource;
+  if not Assigned(AFileSource) then Exit;
+
+  if AFileSource.IsClass(TFileSystemFileSource) and
+     gDirectorySettings.TryGetSorting(CurrentPath, DirectorySortings) then
+  begin
+    FSortings := DirectorySortings;
+    FSortingProperties := GetSortingProperties;
+  end;
+end;
+
+procedure TFileView.SaveDirectorySettings;
+var
+  AFileSource: IFileSource;
+begin
+  if not gSaveDirectorySettings or not Assigned(gDirectorySettings) or
+     (FileSourcesCount = 0) or (CurrentPath = EmptyStr) then
+    Exit;
+
+  AFileSource := FileSource;
+  if not Assigned(AFileSource) then Exit;
+
+  if AFileSource.IsClass(TFileSystemFileSource) then
+    gDirectorySettings.SetSorting(CurrentPath, Sorting);
+end;
+
 procedure TFileView.SortAllDisplayFiles;
 begin
   TDisplayFileSorter.Sort(FAllDisplayFiles, SortingForSorter);
@@ -2729,6 +2767,7 @@ begin
 
   if Assigned(aFileSource) then
   begin
+    ApplyDirectorySettings;
     FSortingProperties := GetSortingProperties;
     FileSource.AddEventListener(@FileSourceEventListener);
   end;
@@ -2964,6 +3003,8 @@ begin
   FLoadFilesStartTime := 0;
   FLoadFilesFinishTime := 0;
   FLoadFilesNoDelayCount := 0;
+
+  ApplyDirectorySettings;
 
   if Assigned(OnAfterChangePath) then
     OnAfterChangePath(Self);
@@ -3753,4 +3794,3 @@ begin
 end;
 
 end.
-

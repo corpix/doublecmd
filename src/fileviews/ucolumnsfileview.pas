@@ -295,6 +295,9 @@ begin
     end;
     inherited SetSorting(NewSorting);
   end;
+
+  ApplyDirectorySettings;
+  SetColumnsSortDirections;
 end;
 
 procedure TColumnsFileView.SaveConfiguration(AConfig: TXmlConfig; ANode: TXmlNode; ASaveHistory:boolean);
@@ -370,6 +373,7 @@ begin
 
     AddOrUpdateSorting(NewSorting, SortFunctions, SortingDirection);
     SetSorting(NewSorting);
+    SaveDirectorySettings;
   end;
 end;
 
@@ -454,6 +458,7 @@ end;
 procedure TColumnsFileView.AfterChangePath;
 begin
   inherited AfterChangePath;
+  SetColumnsSortDirections;
 
   if not IsLoadingFileList then
   begin
@@ -2394,4 +2399,3 @@ begin
 end;
 
 end.
-

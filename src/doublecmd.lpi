@@ -338,7 +338,7 @@ end;"/>
         <PackageName Value="Image32"/>
       </Item13>
     </RequiredPackages>
-    <Units Count="303">
+    <Units Count="304">
       <Unit0>
         <Filename Value="doublecmd.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -2184,6 +2184,11 @@ end;"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="uDarwinFNKey"/>
       </Unit302>
+      <Unit303>
+        <Filename Value="udirectorysettings.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uDirectorySettings"/>
+      </Unit303>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

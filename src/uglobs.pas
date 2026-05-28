@@ -339,6 +339,7 @@ var
   gSortNatural: Boolean;
   gSortSpecial: Boolean;
   gSortFolderMode: TSortFolderMode;
+  gSaveDirectorySettings: Boolean;
   gNewFilesPosition: TNewFilesPosition;
   gUpdatedFilesPosition: TUpdatedFilesPosition;
   gLynxLike:Boolean;
@@ -766,7 +767,7 @@ uses
    uGlobsPaths, uLng, uShowMsg, uFileProcs, uOSUtils, uFindFiles, uEarlyConfig,
    dmHigh, uDCUtils, fMultiRename, uDCVersion, uDebug, uFileFunctions,
    uDefaultPlugins, Lua, uKeyboard, DCOSUtils, DCStrUtils, uPixMapManager,
-   FileUtil, uSynDiffControls, InterfaceBase
+   FileUtil, uSynDiffControls, InterfaceBase, uDirectorySettings
    {$IF DEFINED(MSWINDOWS)}
     , ShlObj
    {$ENDIF}
@@ -1003,6 +1004,12 @@ begin
   end;
 end;
 
+function LoadDirectorySettingsConfig(var {%H-}ErrorMessage: String): Boolean;
+begin
+  gDirectorySettings.LoadFromFile(gpCfgDir + DirectorySettingsConfig);
+  Result := True;
+end;
+
 function LoadLocalConfig(var {%H-}ErrorMessage: String): Boolean;
 var
   Root: TXmlNode;
@@ -1028,6 +1035,12 @@ begin
   end;
 
   Result:= True;
+end;
+
+procedure SaveDirectorySettingsConfig;
+begin
+  if gSaveDirectorySettings or (gDirectorySettings.Count > 0) then
+    gDirectorySettings.SaveToFile(gpCfgDir + DirectorySettingsConfig);
 end;
 
 procedure SaveHistoryConfig;
@@ -1718,6 +1731,7 @@ begin
   gColorExt := TColorExt.Create;
   gFileInfoToolTip := TFileInfoToolTip.Create;
   gDirectoryHotlist := TDirectoryHotlist.Create;
+  gDirectorySettings := TDirectorySettings.Create;
   gFavoriteTabsList := TFavoriteTabsList.Create;
   glsDirHistory := TStringListEx.Create;
   glsCmdLineHistory := TStringListEx.Create;
@@ -1757,6 +1771,7 @@ begin
   FreeAndNil(glsVolumeSizeHistory);
   FreeAndNil(gSpecialDirList);
   FreeAndNil(gDirectoryHotlist);
+  FreeAndNil(gDirectorySettings);
   FreeAndNil(gFavoriteTabsList);
   FreeAndNil(glsMaskHistory);
   FreeAndNil(glsSyncMaskHistory);
@@ -1840,6 +1855,7 @@ begin
   gSortNatural := False;
   gSortSpecial := False;
   gSortFolderMode := sfmSortLikeFileShowFirst;
+  gSaveDirectorySettings := False;
   gNewFilesPosition := nfpSortedPosition;
   gUpdatedFilesPosition := ufpNoChange;
   gFileSizeFormat := fsfFloat;
@@ -2578,6 +2594,10 @@ begin
   if mbFileExists(gpCfgDir + 'history.xml') then
     LoadConfigCheckErrors(@LoadHistoryConfig, gpCfgDir + 'history.xml', ErrorMessage);
 
+  { Per-directory settings }
+  if mbFileExists(gpCfgDir + DirectorySettingsConfig) then
+    LoadConfigCheckErrors(@LoadDirectorySettingsConfig, gpCfgDir + DirectorySettingsConfig, ErrorMessage);
+
   FillFileFuncList;
 
   { Specialdir }
@@ -2622,6 +2642,7 @@ begin
     SaveWithCheck(@SaveCfgMainConfig, 'main configuration', ErrMsg);
     SaveWithCheck(@SaveHighlightersConfig, 'highlighters config', ErrMsg);
     SaveWithCheck(@SaveHistoryConfig, 'various history', ErrMsg);
+    SaveWithCheck(@SaveDirectorySettingsConfig, 'directory settings', ErrMsg);
     SaveWithCheck(@SaveColorsConfig, 'color themes', ErrMsg);
 
     if ErrMsg <> EmptyStr then
@@ -2983,6 +3004,11 @@ begin
         gSortFolderMode:= TSortFolderMode(GetValue(SubNode, 'SortFolderMode', Integer(gSortFolderMode)));
         gNewFilesPosition := TNewFilesPosition(GetValue(SubNode, 'NewFilesPosition', Integer(gNewFilesPosition)));
         gUpdatedFilesPosition := TUpdatedFilesPosition(GetValue(SubNode, 'UpdatedFilesPosition', Integer(gUpdatedFilesPosition)));
+      end;
+      SubNode := Node.FindNode('DirectorySettings');
+      if Assigned(SubNode) then
+      begin
+        gSaveDirectorySettings := GetValue(SubNode, 'Save', gSaveDirectorySettings);
       end;
       SubNode := FindNode(Node, 'ColumnsView');
       if Assigned(SubNode) then
@@ -3695,6 +3721,8 @@ begin
     SetValue(SubNode, 'SortFolderMode', Integer(gSortFolderMode));
     SetValue(SubNode, 'NewFilesPosition', Integer(gNewFilesPosition));
     SetValue(SubNode, 'UpdatedFilesPosition', Integer(gUpdatedFilesPosition));
+    SubNode := FindNode(Node, 'DirectorySettings', True);
+    SetValue(SubNode, 'Save', gSaveDirectorySettings);
     SubNode := FindNode(Node, 'ColumnsView', True);
     SetValue(SubNode, 'LongInStatus', gColumnsLongInStatus);
     SetValue(SubNode, 'AutoSaveWidth', gColumnsAutoSaveWidth);
