@@ -25,15 +25,22 @@ const
 
 type
 
+  TDirectoryViewType = (dvtNone, dvtColumns, dvtBrief, dvtThumbnails);
+
   { TDirectorySettingsEntry }
 
   TDirectorySettingsEntry = class
   private
+    FColumnSet: String;
     FSortings: TFileSortings;
+    FViewType: TDirectoryViewType;
   public
     destructor Destroy; override;
+    function HasSettings: Boolean;
 
+    property ColumnSet: String read FColumnSet write FColumnSet;
     property Sortings: TFileSortings read FSortings write FSortings;
+    property ViewType: TDirectoryViewType read FViewType write FViewType;
   end;
 
   { TDirectorySettings }
@@ -43,6 +50,7 @@ type
     FEntries: TStringList;
 
     function FindEntry(const APath: String): TDirectorySettingsEntry;
+    function FindOrCreateEntry(const APath: String): TDirectorySettingsEntry;
     function GetCount: Integer;
     function NormalizePath(const APath: String): String;
   public
@@ -53,7 +61,11 @@ type
     procedure LoadFromFile(const AFileName: String);
     procedure SaveToFile(const AFileName: String);
     function TryGetSorting(const APath: String; out ASortings: TFileSortings): Boolean;
+    function TryGetView(const APath: String; out AViewType: TDirectoryViewType;
+                        out AColumnSet: String): Boolean;
     procedure SetSorting(const APath: String; const ASortings: TFileSortings);
+    procedure SetView(const APath: String; AViewType: TDirectoryViewType;
+                      const AColumnSet: String = '');
 
     property Count: Integer read GetCount;
   end;
@@ -65,6 +77,35 @@ implementation
 
 uses
   DCOSUtils, DCStrUtils;
+
+function DirectoryViewTypeToString(AViewType: TDirectoryViewType): String;
+begin
+  case AViewType of
+    dvtColumns:
+      Result := 'columns';
+    dvtBrief:
+      Result := 'brief';
+    dvtThumbnails:
+      Result := 'thumbnails';
+  else
+    Result := EmptyStr;
+  end;
+end;
+
+function TryStringToDirectoryViewType(const AValue: String; out AViewType: TDirectoryViewType): Boolean;
+begin
+  Result := True;
+  if AValue = 'columns' then
+    AViewType := dvtColumns
+  else if AValue = 'brief' then
+    AViewType := dvtBrief
+  else if AValue = 'thumbnails' then
+    AViewType := dvtThumbnails
+  else begin
+    AViewType := dvtNone;
+    Result := False;
+  end;
+end;
 
 function LoadSortings(AConfig: TXmlConfig; ANode: TXmlNode): TFileSortings;
 var
@@ -119,12 +160,50 @@ begin
   end;
 end;
 
+procedure LoadView(AConfig: TXmlConfig; ANode: TXmlNode;
+  out AViewType: TDirectoryViewType; out AColumnSet: String);
+var
+  ViewNode: TXmlNode;
+  ViewTypeName: String;
+begin
+  AViewType := dvtNone;
+  AColumnSet := EmptyStr;
+
+  ViewNode := AConfig.FindNode(ANode, 'View');
+  if not Assigned(ViewNode) then Exit;
+
+  if AConfig.TryGetAttr(ViewNode, 'Type', ViewTypeName) and
+     TryStringToDirectoryViewType(ViewTypeName, AViewType) then
+  begin
+    if AViewType = dvtColumns then
+      AColumnSet := AConfig.GetValue(ViewNode, 'ColumnsSet', 'Default');
+  end;
+end;
+
+procedure SaveView(AConfig: TXmlConfig; ANode: TXmlNode;
+  AViewType: TDirectoryViewType; const AColumnSet: String);
+var
+  ViewNode: TXmlNode;
+begin
+  if AViewType = dvtNone then Exit;
+
+  ViewNode := AConfig.FindNode(ANode, 'View', True);
+  AConfig.SetAttr(ViewNode, 'Type', DirectoryViewTypeToString(AViewType));
+  if AViewType = dvtColumns then
+    AConfig.SetValue(ViewNode, 'ColumnsSet', AColumnSet);
+end;
+
 { TDirectorySettingsEntry }
 
 destructor TDirectorySettingsEntry.Destroy;
 begin
   FSortings := nil;
   inherited Destroy;
+end;
+
+function TDirectorySettingsEntry.HasSettings: Boolean;
+begin
+  Result := (Length(FSortings) > 0) or (FViewType <> dvtNone);
 end;
 
 { TDirectorySettings }
@@ -162,6 +241,23 @@ begin
     Result := TDirectorySettingsEntry(FEntries.Objects[Index]);
 end;
 
+function TDirectorySettings.FindOrCreateEntry(const APath: String): TDirectorySettingsEntry;
+var
+  Index: Integer;
+  NormalizedPath: String;
+begin
+  Result := nil;
+  NormalizedPath := NormalizePath(APath);
+  if NormalizedPath = EmptyStr then Exit;
+
+  if FEntries.Find(NormalizedPath, Index) then
+    Result := TDirectorySettingsEntry(FEntries.Objects[Index])
+  else begin
+    Result := TDirectorySettingsEntry.Create;
+    FEntries.AddObject(NormalizedPath, Result);
+  end;
+end;
+
 function TDirectorySettings.GetCount: Integer;
 begin
   Result := FEntries.Count;
@@ -179,7 +275,9 @@ var
   AConfig: TXmlConfig;
   RootNode, DirectoryNode: TXmlNode;
   APath: String;
+  ColumnSet: String;
   Entry: TDirectorySettingsEntry;
+  ViewType: TDirectoryViewType;
 begin
   Clear;
   if not mbFileExists(AFileName) then Exit;
@@ -199,8 +297,11 @@ begin
           Entry := TDirectorySettingsEntry.Create;
           try
             Entry.Sortings := LoadSortings(AConfig, DirectoryNode);
+            LoadView(AConfig, DirectoryNode, ViewType, ColumnSet);
             if Length(Entry.Sortings) > 0 then
               SetSorting(APath, Entry.Sortings);
+            if ViewType <> dvtNone then
+              SetView(APath, ViewType, ColumnSet);
           finally
             Entry.Free;
           end;
@@ -228,11 +329,12 @@ begin
     for I := 0 to FEntries.Count - 1 do
     begin
       Entry := TDirectorySettingsEntry(FEntries.Objects[I]);
-      if Length(Entry.Sortings) > 0 then
+      if Entry.HasSettings then
       begin
         DirectoryNode := AConfig.AddNode(RootNode, 'Directory');
         AConfig.SetAttr(DirectoryNode, 'Path', FEntries[I]);
         SaveSortings(AConfig, DirectoryNode, Entry.Sortings);
+        SaveView(AConfig, DirectoryNode, Entry.ViewType, Entry.ColumnSet);
       end;
     end;
     AConfig.Save;
@@ -252,23 +354,45 @@ begin
     ASortings := CloneSortings(Entry.Sortings);
 end;
 
-procedure TDirectorySettings.SetSorting(const APath: String; const ASortings: TFileSortings);
+function TDirectorySettings.TryGetView(const APath: String; out AViewType: TDirectoryViewType;
+  out AColumnSet: String): Boolean;
 var
-  Index: Integer;
-  NormalizedPath: String;
   Entry: TDirectorySettingsEntry;
 begin
-  NormalizedPath := NormalizePath(APath);
-  if NormalizedPath = EmptyStr then Exit;
-
-  if FEntries.Find(NormalizedPath, Index) then
-    Entry := TDirectorySettingsEntry(FEntries.Objects[Index])
-  else begin
-    Entry := TDirectorySettingsEntry.Create;
-    FEntries.AddObject(NormalizedPath, Entry);
+  AViewType := dvtNone;
+  AColumnSet := EmptyStr;
+  Entry := FindEntry(APath);
+  Result := Assigned(Entry) and (Entry.ViewType <> dvtNone);
+  if Result then
+  begin
+    AViewType := Entry.ViewType;
+    AColumnSet := Entry.ColumnSet;
   end;
+end;
+
+procedure TDirectorySettings.SetSorting(const APath: String; const ASortings: TFileSortings);
+var
+  Entry: TDirectorySettingsEntry;
+begin
+  Entry := FindOrCreateEntry(APath);
+  if not Assigned(Entry) then Exit;
 
   Entry.Sortings := CloneSortings(ASortings);
+end;
+
+procedure TDirectorySettings.SetView(const APath: String; AViewType: TDirectoryViewType;
+  const AColumnSet: String);
+var
+  Entry: TDirectorySettingsEntry;
+begin
+  Entry := FindOrCreateEntry(APath);
+  if not Assigned(Entry) then Exit;
+
+  Entry.ViewType := AViewType;
+  if AViewType = dvtColumns then
+    Entry.ColumnSet := AColumnSet
+  else
+    Entry.ColumnSet := EmptyStr;
 end;
 
 end.

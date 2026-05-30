@@ -228,7 +228,9 @@ uses
   uKeyboard,
   uFileFunctions,
   uFileViewNotebook,
-  fOptionsCustomColumns;
+  fOptionsCustomColumns,
+  uDirectorySettings,
+  uFileSystemFileSource;
 
 const
   CELL_PADDING = 2;
@@ -899,6 +901,10 @@ begin
       end;
       UpdateColumnsView;
       RedrawFiles;
+      if gSaveDirectorySettings and Assigned(gDirectorySettings) and
+         (FileSourcesCount > 0) and Assigned(FileSource) and
+         FileSource.IsClass(TFileSystemFileSource) then
+        gDirectorySettings.SetView(CurrentPath, dvtColumns, ActiveColm);
     end;
   end;
 end;

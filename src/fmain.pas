@@ -689,6 +689,7 @@ type
     procedure CloseActiveTab;
 
     procedure FileViewFreeAsync(Data: PtrInt);
+    procedure ApplyDirectoryViewSettingsAsync(Data: PtrInt);
     function FileViewAutoSwitch(FileSource: IFileSource; var FileView: TFileView; Reason: TChangePathReason; const NewPath: String): Boolean;
     function FileViewBeforeChangePath(FileView: TFileView; NewFileSource: IFileSource; Reason: TChangePathReason; const NewPath : String): Boolean;
     procedure FileViewAfterChangePath(FileView: TFileView);
@@ -969,7 +970,7 @@ uses
   Laz2_XMLRead, DCOSUtils, DCStrUtils, fOptions, fOptionsFrame, fOptionsToolbar, uClassesEx,
   uHotDir, uFileSorting, DCBasicTypes, foptionsDirectoryHotlist, uConnectionManager,
   fOptionsToolbarBase, fOptionsToolbarMiddle, fEditor, uColumns, StrUtils, uSysFolders,
-  uColumnsFileView, dmHigh, uFileSourceOperationMisc
+  uColumnsFileView, uDirectorySettings, dmHigh, uFileSourceOperationMisc
 {$IFDEF MSWINDOWS}
   , uShellFileSource, uNetworkThread
 {$ENDIF}
@@ -1006,6 +1007,14 @@ var
       (ACaption: ''; ACommand: 'cm_Exit'));
 
 type
+
+  PDirectoryViewSettingsRequest = ^TDirectoryViewSettingsRequest;
+  TDirectoryViewSettingsRequest = record
+    Page: TFileViewPage;
+    Path: String;
+    ViewType: TDirectoryViewType;
+    ColumnSet: String;
+  end;
 
   { TFreeSpaceData }
 
@@ -4594,6 +4603,73 @@ begin
   FileView.Free;
 end;
 
+procedure TfrmMain.ApplyDirectoryViewSettingsAsync(Data: PtrInt);
+var
+  AColumnSet: String;
+  AFileView: TFileView;
+  ANewFileView: TFileView = nil;
+  ARequest: PDirectoryViewSettingsRequest absolute Data;
+  AViewType: TDirectoryViewType;
+  RestoreFocus: Boolean;
+begin
+  if not Assigned(ARequest) then
+    Exit;
+  try
+    if not gSaveDirectorySettings or not Assigned(ARequest^.Page) or
+       not Assigned(ARequest^.Page.FileView) then
+      Exit;
+
+    AFileView := ARequest^.Page.FileView;
+    if (AFileView.FileSourcesCount = 0) or not Assigned(AFileView.FileSource) or
+       not AFileView.FileSource.IsClass(TFileSystemFileSource) or
+       not mbCompareFileNames(AFileView.CurrentPath, ARequest^.Path) then
+      Exit;
+
+    AViewType := ARequest^.ViewType;
+    AColumnSet := ARequest^.ColumnSet;
+    if (AViewType = dvtColumns) and (ColSet.Items.IndexOf(AColumnSet) < 0) then
+      AColumnSet := 'Default';
+
+    case AViewType of
+      dvtColumns:
+        if AFileView is TColumnsFileView then
+        begin
+          if TColumnsFileView(AFileView).ActiveColm <> AColumnSet then
+            TColumnsFileView(AFileView).SetColumnSet(AColumnSet);
+          Exit;
+        end
+        else
+          ANewFileView := TColumnsFileView.Create(ARequest^.Page, AFileView, AColumnSet);
+      dvtBrief:
+        if AFileView is TBriefFileView then
+          Exit
+        else
+          ANewFileView := TBriefFileView.Create(ARequest^.Page, AFileView);
+      dvtThumbnails:
+        if AFileView is TThumbFileView then
+          Exit
+        else begin
+          ARequest^.Page.BackupViewClass := TFileViewClass(AFileView.ClassType);
+          if AFileView is TColumnsFileView then
+            ARequest^.Page.BackupColumnSet := TColumnsFileView(AFileView).ActiveColm;
+          ANewFileView := TThumbFileView.Create(ARequest^.Page, AFileView);
+        end;
+    end;
+
+    if Assigned(ANewFileView) then
+    begin
+      RestoreFocus := (ActiveFrame = AFileView);
+      ARequest^.Page.FileView := ANewFileView;
+      ARequest^.Page.FileView.Reload(True);
+      if RestoreFocus then
+        ARequest^.Page.FileView.SetFocus;
+      UpdateFileView;
+    end;
+  finally
+    Dispose(ARequest);
+  end;
+end;
+
 function TfrmMain.FileViewAutoSwitch(FileSource: IFileSource; var FileView: TFileView;
   Reason: TChangePathReason; const NewPath: String): Boolean;
 var
@@ -4806,8 +4882,11 @@ procedure TfrmMain.FileViewAfterChangePath(FileView: TFileView);
 var
   S: String;
   Index: Integer;
+  AColumnSet: String;
   Page: TFileViewPage;
   ANoteBook : TFileViewNotebook;
+  ARequest: PDirectoryViewSettingsRequest;
+  AViewType: TDirectoryViewType;
 begin
   if FileView.NotebookPage is TFileViewPage then
     begin
@@ -4866,6 +4945,19 @@ begin
         end;
         // Update page hint
         ANoteBook.Hint := FileView.CurrentPath;
+      end;
+
+      if gSaveDirectorySettings and Assigned(gDirectorySettings) and
+         Assigned(FileView.FileSource) and
+         FileView.FileSource.IsClass(TFileSystemFileSource) and
+         gDirectorySettings.TryGetView(FileView.CurrentPath, AViewType, AColumnSet) then
+      begin
+        New(ARequest);
+        ARequest^.Page := Page;
+        ARequest^.Path := FileView.CurrentPath;
+        ARequest^.ViewType := AViewType;
+        ARequest^.ColumnSet := AColumnSet;
+        Application.QueueAsyncCall(@ApplyDirectoryViewSettingsAsync, PtrInt(ARequest));
       end;
 
       if Assigned(onFileViewUpdated) then
@@ -7468,4 +7560,3 @@ initialization
   TFormCommands.RegisterCommandsForm(TfrmMain, HotkeysCategory, @rsHotkeyCategoryMain);
 
 end.
-

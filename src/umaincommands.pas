@@ -47,6 +47,7 @@ type
 
    // Helper routines
    procedure TryGetParentDir(FileView: TFileView; var SelectedFiles: TFiles);
+   procedure SaveDirectoryViewSettings(FileView: TFileView);
 
    // Filters out commands.
    function CommandsFilter(Command: String): Boolean;
@@ -410,7 +411,7 @@ uses fOptionsPluginsBase, fOptionsPluginsDSX, fOptionsPluginsWCX,
      uHotDir, DCXmlConfig, dmCommonData, fOptionsFrame, foptionsDirectoryHotlist,
      fMainCommandsDlg, uConnectionManager, fOptionsFavoriteTabs, fTreeViewMenu,
      uArchiveFileSource, fOptionsHotKeys, fBenchmark, uAdministrator, uWcxArchiveFileSource,
-     uColumnsFileView, uTypes
+     uColumnsFileView, uDirectorySettings, uTypes
      ;
 
 resourcestring
@@ -471,6 +472,39 @@ begin
       else
         FreeAndNil(activeFile);
     end;
+end;
+
+procedure TMainCommands.SaveDirectoryViewSettings(FileView: TFileView);
+var
+  AColumnSet: String;
+  AFileSource: IFileSource;
+  AViewType: TDirectoryViewType;
+begin
+  if not gSaveDirectorySettings or not Assigned(gDirectorySettings) or
+     not Assigned(FileView) or (FileView.FileSourcesCount = 0) or
+     (FileView.CurrentPath = EmptyStr) then
+    Exit;
+
+  AFileSource := FileView.FileSource;
+  if not Assigned(AFileSource) or not AFileSource.IsClass(TFileSystemFileSource) then
+    Exit;
+
+  AColumnSet := EmptyStr;
+  if FileView is TColumnsFileView then
+  begin
+    AViewType := dvtColumns;
+    AColumnSet := TColumnsFileView(FileView).ActiveColm;
+    if AColumnSet = EmptyStr then
+      AColumnSet := 'Default';
+  end
+  else if FileView is TBriefFileView then
+    AViewType := dvtBrief
+  else if FileView is TThumbFileView then
+    AViewType := dvtThumbnails
+  else
+    Exit;
+
+  gDirectorySettings.SetView(FileView.CurrentPath, AViewType, AColumnSet);
 end;
 
 procedure TMainCommands.OnCopyOutStateChanged(Operation: TFileSourceOperation;
@@ -2228,6 +2262,7 @@ begin
   begin
     aFileView:= TBriefFileView.Create(ActiveNotebook.ActivePage, ActiveFrame);
     ActiveNotebook.ActivePage.FileView:= aFileView;
+    SaveDirectoryViewSettings(ActiveFrame);
     ActiveFrame.SetFocus;
   end;
 end;
@@ -2240,6 +2275,7 @@ begin
   begin
     aFileView:= TBriefFileView.Create(LeftTabs.ActivePage, FrameLeft);
     LeftTabs.ActivePage.FileView:= aFileView;
+    SaveDirectoryViewSettings(FrameLeft);
   end;
 end;
 
@@ -2251,6 +2287,7 @@ begin
   begin
     aFileView:= TBriefFileView.Create(RightTabs.ActivePage, FrameRight);
     RightTabs.ActivePage.FileView:= aFileView;
+    SaveDirectoryViewSettings(FrameRight);
   end;
 end;
 
@@ -2269,6 +2306,7 @@ begin
       ActiveNotebook.ActivePage.FileView:= aFileView;
       ActiveFrame.SetFocus;
     end;
+    SaveDirectoryViewSettings(ActiveFrame);
   end;
 end;
 
@@ -2286,6 +2324,7 @@ begin
       aFileView:= TColumnsFileView.Create(LeftTabs.ActivePage, FrameLeft, AParam);
       LeftTabs.ActivePage.FileView:= aFileView;
     end;
+    SaveDirectoryViewSettings(FrameLeft);
   end;
 end;
 
@@ -2303,6 +2342,7 @@ begin
       aFileView:= TColumnsFileView.Create(RightTabs.ActivePage, FrameRight, AParam);
       RightTabs.ActivePage.FileView:= aFileView;
     end;
+    SaveDirectoryViewSettings(FrameRight);
   end;
 end;
 
@@ -2338,18 +2378,21 @@ begin
     fpLeft: ToggleOrNotToOrFromThumbnailsView(frmMain.FrameLeft, frmMain.LeftTabs);
     fpRight: ToggleOrNotToOrFromThumbnailsView(frmMain.FrameRight, frmMain.RightTabs);
   end;
+  SaveDirectoryViewSettings(frmMain.ActiveFrame);
   frmMain.ActiveFrame.SetFocus;
 end;
 
 procedure TMainCommands.cm_LeftThumbView(const Params: array of string);
 begin
   ToggleOrNotToOrFromThumbnailsView(frmMain.FrameLeft, frmMain.LeftTabs);
+  SaveDirectoryViewSettings(frmMain.FrameLeft);
   frmMain.ActiveFrame.SetFocus;
 end;
 
 procedure TMainCommands.cm_RightThumbView(const Params: array of string);
 begin
   ToggleOrNotToOrFromThumbnailsView(frmMain.FrameRight, frmMain.RightTabs);
+  SaveDirectoryViewSettings(frmMain.FrameRight);
   frmMain.ActiveFrame.SetFocus;
 end;
 
