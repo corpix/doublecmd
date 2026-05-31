@@ -1,5 +1,38 @@
 {
   "nodes": {
+    "fetchurl-sources": {
+      "flake": false,
+      "locked": {
+        "path": "./consumer-overridable/fetchurl-sources.nix",
+        "type": "path"
+      },
+      "original": {
+        "path": "./consumer-overridable/fetchurl-sources.nix",
+        "type": "path"
+      },
+      "parent": [
+        "overlay",
+        "nixpkgs-xlibre"
+      ]
+    },
+    "flake-parts": {
+      "inputs": {
+        "nixpkgs-lib": "nixpkgs-lib"
+      },
+      "locked": {
+        "lastModified": 1775087534,
+        "narHash": "sha256-91qqW8lhL7TLwgQWijoGBbiD4t7/q75KTi8NxjVmSmA=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "3107b77cd68437b9a76194f0f7f9c55f2329ca5b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -10,6 +43,24 @@
         "owner": "numtide",
         "repo": "flake-utils",
         "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "flake-utils_2": {
+      "inputs": {
+        "systems": "systems_2"
+      },
+      "locked": {
+        "lastModified": 1726560853,
+        "narHash": "sha256-X6rJYSESBVr3hBoH0WbKE5KvhPU5bloyZ2L4K60/fPQ=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "c1dfcf08411b08f6b8615f7d8971a2bfa81d5e8a",
         "type": "github"
       },
       "original": {
@@ -31,10 +82,96 @@
         "url": "https://git.tatikoma.dev/corpix/nixpkgs/archive/corpix.tar.gz"
       }
     },
+    "nixpkgs-esp": {
+      "inputs": {
+        "flake-utils": "flake-utils_2",
+        "nixpkgs": [
+          "overlay",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1772536960,
+        "narHash": "sha256-1eZqAldB1SK5z/yMfK9Jyi+iXM3rexA/rjsFOLGNwCM=",
+        "ref": "corpix",
+        "rev": "46f562174d7e8cc8464f5bacd0d7ccd09b55d529",
+        "revCount": 175,
+        "type": "git",
+        "url": "https://git.tatikoma.dev/corpix/nixpkgs-esp.git"
+      },
+      "original": {
+        "ref": "corpix",
+        "type": "git",
+        "url": "https://git.tatikoma.dev/corpix/nixpkgs-esp.git"
+      }
+    },
+    "nixpkgs-lib": {
+      "locked": {
+        "lastModified": 1774748309,
+        "narHash": "sha256-+U7gF3qxzwD5TZuANzZPeJTZRHS29OFQgkQ2kiTJBIQ=",
+        "owner": "nix-community",
+        "repo": "nixpkgs.lib",
+        "rev": "333c4e0545a6da976206c74db8773a1645b5870a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "nixpkgs.lib",
+        "type": "github"
+      }
+    },
+    "nixpkgs-xlibre": {
+      "inputs": {
+        "fetchurl-sources": "fetchurl-sources",
+        "flake-parts": "flake-parts",
+        "nixpkgs": [
+          "overlay",
+          "nixpkgs"
+        ],
+        "systems": "systems_3",
+        "xlibre-drivers-overlay-choice": "xlibre-drivers-overlay-choice"
+      },
+      "locked": {
+        "lastModified": 1777121286,
+        "narHash": "sha256-X4WD5zb96W81zFMyTZlYwEGQgZAOYlBUF2k1oC00A8A=",
+        "ref": "corpix",
+        "rev": "7a70d2071a06952fc8e937be5718c2e22f61cde5",
+        "revCount": 130,
+        "type": "git",
+        "url": "https://git.tatikoma.dev/corpix/nixpkgs-xlibre.git"
+      },
+      "original": {
+        "ref": "corpix",
+        "type": "git",
+        "url": "https://git.tatikoma.dev/corpix/nixpkgs-xlibre.git"
+      }
+    },
+    "overlay": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "nixpkgs-esp": "nixpkgs-esp",
+        "nixpkgs-xlibre": "nixpkgs-xlibre",
+        "treefmt-nix": "treefmt-nix"
+      },
+      "locked": {
+        "lastModified": 1780528750,
+        "narHash": "sha256-QM4QL+hmvaKLrYAns44XcprheRI3XlD5E3tRz/+vG+o=",
+        "rev": "6e3aba39d1f6d34f98771504a891167309c24f7c",
+        "type": "tarball",
+        "url": "https://git.tatikoma.dev/api/v1/repos/corpix/nixpkgs-overlay/archive/6e3aba39d1f6d34f98771504a891167309c24f7c.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://git.tatikoma.dev/corpix/nixpkgs-overlay/archive/master.tar.gz"
+      }
+    },
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "overlay": "overlay"
       }
     },
     "systems": {
@@ -51,6 +188,72 @@
         "repo": "default",
         "type": "github"
       }
+    },
+    "systems_2": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "systems_3": {
+      "flake": false,
+      "locked": {
+        "path": "./systems.nix",
+        "type": "path"
+      },
+      "original": {
+        "path": "./systems.nix",
+        "type": "path"
+      },
+      "parent": [
+        "overlay",
+        "nixpkgs-xlibre"
+      ]
+    },
+    "treefmt-nix": {
+      "inputs": {
+        "nixpkgs": [
+          "overlay",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1775636079,
+        "narHash": "sha256-pc20NRoMdiar8oPQceQT47UUZMBTiMdUuWrYu2obUP0=",
+        "owner": "numtide",
+        "repo": "treefmt-nix",
+        "rev": "790751ff7fd3801feeaf96d7dc416a8d581265ba",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "treefmt-nix",
+        "type": "github"
+      }
+    },
+    "xlibre-drivers-overlay-choice": {
+      "flake": false,
+      "locked": {
+        "path": "./consumer-overridable/drivers-overlay-choice.nix",
+        "type": "path"
+      },
+      "original": {
+        "path": "./consumer-overridable/drivers-overlay-choice.nix",
+        "type": "path"
+      },
+      "parent": [
+        "overlay",
+        "nixpkgs-xlibre"
+      ]
     }
   },
   "root": "root",

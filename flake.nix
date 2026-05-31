@@ -4,18 +4,25 @@
   inputs = {
     nixpkgs.url = "tarball+https://git.tatikoma.dev/corpix/nixpkgs/archive/corpix.tar.gz";
     flake-utils.url = "github:numtide/flake-utils";
+
+    overlay.url = "tarball+https://git.tatikoma.dev/corpix/nixpkgs-overlay/archive/master.tar.gz";
+    overlay.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
     {
       self,
       nixpkgs,
+      overlay,
       flake-utils,
     }:
+    let
+      overlays = [ overlay.overlays.default ];
+    in
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgs = import nixpkgs { inherit system; };
+        pkgs = import nixpkgs { inherit system overlays; };
         lib = pkgs.lib;
 
         lazbuild = pkgs.writeShellScriptBin "lazbuild" ''
@@ -42,6 +49,7 @@
             lazbuild
             lazarus
             pkg-config
+            pascal-language-server
           ];
 
           buildInputs = runtimeLibs;
@@ -62,7 +70,12 @@
             export QT_QPA_PLATFORM_PLUGIN_PATH="${qtPluginPath}/platforms"
 
             export lazbuild="$(command -v lazbuild)"
+            export PP="${pkgs.fpc}/bin/fpc"
+            export FPCDIR="${pkgs.lazarus}/share/fpcsrc"
+            export LAZARUSDIR="${pkgs.lazarus}/share/lazarus"
             export LAZARUS_DIR="${pkgs.lazarus}/share/lazarus"
+            export FPCTARGET="${pkgs.stdenv.hostPlatform.parsed.kernel.name}"
+            export FPCTARGETCPU="${pkgs.stdenv.hostPlatform.parsed.cpu.name}"
 
             echo "Double Commander dev shell"
             echo "  lazarus pcp:   $DOUBLECMD_LAZARUS_PCP"
