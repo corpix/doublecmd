@@ -59,6 +59,7 @@ type
 
     procedure Clear;
     procedure LoadFromFile(const AFileName: String);
+    function RemoveMissingDirectories: Integer;
     procedure SaveToFile(const AFileName: String);
     function TryGetSorting(const APath: String; out ASortings: TFileSortings): Boolean;
     function TryGetView(const APath: String; out AViewType: TDirectoryViewType;
@@ -309,8 +310,25 @@ begin
       end;
       DirectoryNode := DirectoryNode.NextSibling;
     end;
+    RemoveMissingDirectories;
   finally
     AConfig.Free;
+  end;
+end;
+
+function TDirectorySettings.RemoveMissingDirectories: Integer;
+var
+  I: Integer;
+begin
+  Result := 0;
+  for I := FEntries.Count - 1 downto 0 do
+  begin
+    if not mbDirectoryExists(FEntries[I]) then
+    begin
+      FEntries.Objects[I].Free;
+      FEntries.Delete(I);
+      Inc(Result);
+    end;
   end;
 end;
 
@@ -321,6 +339,8 @@ var
   RootNode, DirectoryNode: TXmlNode;
   Entry: TDirectorySettingsEntry;
 begin
+  RemoveMissingDirectories;
+
   AConfig := TXmlConfig.Create(AFileName);
   try
     RootNode := AConfig.FindNode(AConfig.RootNode, 'DirectorySettings', True);
