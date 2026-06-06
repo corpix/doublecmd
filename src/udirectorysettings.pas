@@ -59,7 +59,7 @@ type
 
     procedure Clear;
     procedure LoadFromFile(const AFileName: String);
-    function RemoveMissingDirectories: Integer;
+    function CleanupMissing: Integer;
     procedure SaveToFile(const AFileName: String);
     function TryGetSorting(const APath: String; out ASortings: TFileSortings): Boolean;
     function TryGetView(const APath: String; out AViewType: TDirectoryViewType;
@@ -310,13 +310,13 @@ begin
       end;
       DirectoryNode := DirectoryNode.NextSibling;
     end;
-    RemoveMissingDirectories;
+    CleanupMissing;
   finally
     AConfig.Free;
   end;
 end;
 
-function TDirectorySettings.RemoveMissingDirectories: Integer;
+function TDirectorySettings.CleanupMissing: Integer;
 var
   I: Integer;
 begin
@@ -339,7 +339,7 @@ var
   RootNode, DirectoryNode: TXmlNode;
   Entry: TDirectorySettingsEntry;
 begin
-  RemoveMissingDirectories;
+  CleanupMissing;
 
   AConfig := TXmlConfig.Create(AFileName);
   try
