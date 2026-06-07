@@ -1608,7 +1608,7 @@ begin
   if wfFileNameChange in FWatchFilter then
     hNotifyFilter := hNotifyFilter or IN_CREATE or IN_DELETE or IN_MOVE;
   if wfAttributesChange in FWatchFilter then
-    hNotifyFilter := hNotifyFilter or IN_ATTRIB or IN_MODIFY;
+    hNotifyFilter := hNotifyFilter or IN_ATTRIB or IN_MODIFY or IN_CLOSE_WRITE;
 
   FHandle := fpinotify_add_watch(FNotifyHandle, FWatchPath, hNotifyFilter);
   if FHandle < 0 then
@@ -1749,4 +1749,3 @@ finalization
   TFileSystemWatcher.DestroyFileSystemWatcher;
 
 end.
-

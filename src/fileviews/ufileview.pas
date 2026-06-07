@@ -129,6 +129,7 @@ type
     FUpdateCount: Integer;           //<en Nr of times BeginUpdate was called without corresponding EndUpdate
     FWatcherEventLastTime: TDateTime;
     FWatcherEventsApplied: Integer;  //<en How many filesystem watcher events have been applied immediately before postponing them
+    FPendingFilesTimerInterval: Integer;
 
     FActive: Boolean;             //<en Is this view active
     FLastActiveFile: String;      //<en Last active file (cursor)
@@ -202,7 +203,7 @@ type
     procedure SetFlags(AValue: TFileViewFlags);
     procedure SetLoadingFileListLongTime(AValue: Boolean);
     procedure StartRecentlyUpdatedTimerIfNeeded;
-    procedure StartUpdatePendingTimer;
+    procedure StartUpdatePendingTimer(Backoff: Boolean = False);
     procedure UpdateFile(const FileName, APath: String; NewFilesPosition: TNewFilesPosition; UpdatedFilesPosition: TUpdatedFilesPosition);
     procedure UpdatedFilesTimerEvent(Sender: TObject);
     procedure UpdatePath({%H-}UpdateAddressToo: Boolean);
@@ -621,6 +622,7 @@ uses
 const
   MinimumReloadInterval  = 1000; // 1 second
   UpdateFilelistInterval =  500;
+  MaxUpdateFilelistInterval = 2000;
 
 constructor TFileView.Create(AOwner: TWinControl; AFileSource: IFileSource; APath: String; AFlags: TFileViewFlags = []);
 begin
@@ -1225,15 +1227,35 @@ begin
   end;
 end;
 
-procedure TFileView.StartUpdatePendingTimer;
+procedure TFileView.StartUpdatePendingTimer(Backoff: Boolean);
+var
+  TimerWasEnabled: Boolean;
 begin
   if not Assigned(FPendingFilesTimer) then
   begin
     FPendingFilesTimer := TTimer.Create(Self);
-    FPendingFilesTimer.Interval := UpdateFilelistInterval;
     FPendingFilesTimer.OnTimer := @UpdatePendingTimerEvent;
   end;
 
+  TimerWasEnabled := FPendingFilesTimer.Enabled;
+
+  if FPendingFilesTimerInterval < UpdateFilelistInterval then
+    FPendingFilesTimerInterval := UpdateFilelistInterval;
+
+  if Backoff and TimerWasEnabled then
+  begin
+    FPendingFilesTimerInterval := FPendingFilesTimerInterval * 2;
+    if FPendingFilesTimerInterval > MaxUpdateFilelistInterval then
+      FPendingFilesTimerInterval := MaxUpdateFilelistInterval;
+    Exit;
+  end
+  else if not Backoff then
+    FPendingFilesTimerInterval := UpdateFilelistInterval;
+
+  if TimerWasEnabled then
+    FPendingFilesTimer.Enabled := False;
+
+  FPendingFilesTimer.Interval := FPendingFilesTimerInterval;
   FPendingFilesTimer.Enabled := True;
 end;
 
@@ -3556,7 +3578,10 @@ begin
         begin
           CurrentTime := SysUtils.Now;
           if DateTimeToTimeStamp(CurrentTime - FWatcherEventLastTime).Time > UpdateFilelistInterval then
+          begin
             FWatcherEventsApplied := 0;
+            FPendingFilesTimerInterval := UpdateFilelistInterval;
+          end;
 
           FWatcherEventLastTime := CurrentTime;
           if FWatcherEventsApplied < 5 then
@@ -3571,7 +3596,7 @@ begin
         if AddToPending then
         begin
           AddEventToPendingFilesChanges(EventData);
-          StartUpdatePendingTimer;
+          StartUpdatePendingTimer(EventData.EventType = fswFileChanged);
         end;
       end
       // else filelist not loaded and not even started loading - discard the event
