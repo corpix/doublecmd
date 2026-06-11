@@ -11001,6 +11001,34 @@ msgstr "Тип"
 msgid "Error creating hardlink."
 msgstr "Ошибка создания жёсткой ссылки."
 
+#: ulng.rshintextractoverwriteoff
+msgid "Existing files in the destination will be kept; you will be prompted for each conflict."
+msgstr "Существующие файлы в каталоге назначения будут сохранены; для каждого конфликта будет показан запрос."
+
+#: ulng.rshintextractoverwriteon
+msgid "Existing files in the destination will be overwritten without prompting."
+msgstr "Существующие файлы в каталоге назначения будут перезаписаны без запроса."
+
+#: ulng.rshintextractpathoff
+msgid "Files will be unpacked directly into the destination directory, without preserving the directory structure stored in the archive."
+msgstr "Файлы будут распакованы прямо в каталог назначения, без сохранения структуры каталогов из архива."
+
+#: ulng.rshintextractpathon
+msgid "Directory structure stored in the archive will be preserved when unpacking."
+msgstr "При распаковке будет сохранена структура каталогов из архива."
+
+#: ulng.rshintextractseparatefolderoff
+msgid "All archives will be unpacked into the destination directory."
+msgstr "Все архивы будут распакованы в каталог назначения."
+
+#: ulng.rshintextractseparatefolderon
+msgid "Each archive will be unpacked into its own subdirectory named after the archive."
+msgstr "Каждый архив будет распакован в отдельный подкаталог с именем архива."
+
+#: ulng.rshintextractseparatefoldersmart
+msgid "Smart mode: a subdirectory named after the archive is created only when the archive contains more than one file or folder at its root."
+msgstr "Умный режим: подкаталог с именем архива создаётся только если в корне архива больше одного файла или папки."
+
 #: ulng.rshotdirforcesortingorderchoices
 msgid "none;Name, a-z;Name, z-a;Ext, a-z;Ext, z-a;Size 9-0;Size 0-9;Date 9-0;Date 0-9"
 msgstr "нет;Имя, а-я;Имя, я-а;Тип, а-я;Тип, я-а;Размер 9-0;Размер 0-9;Дата 9-0;Дата 0-9"

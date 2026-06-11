@@ -10998,6 +10998,34 @@ msgstr "類型"
 msgid "Error creating hardlink."
 msgstr "建立硬式連結發生錯誤。"
 
+#: ulng.rshintextractoverwriteoff
+msgid "Existing files in the destination will be kept; you will be prompted for each conflict."
+msgstr "保留目標位置的現有檔案；每次衝突時都會詢問。"
+
+#: ulng.rshintextractoverwriteon
+msgid "Existing files in the destination will be overwritten without prompting."
+msgstr "目標位置的現有檔案將被直接覆寫。"
+
+#: ulng.rshintextractpathoff
+msgid "Files will be unpacked directly into the destination directory, without preserving the directory structure stored in the archive."
+msgstr "檔案將直接解壓到目標目錄，不保留壓縮檔中儲存的目錄結構。"
+
+#: ulng.rshintextractpathon
+msgid "Directory structure stored in the archive will be preserved when unpacking."
+msgstr "解壓時將保留壓縮檔中儲存的目錄結構。"
+
+#: ulng.rshintextractseparatefolderoff
+msgid "All archives will be unpacked into the destination directory."
+msgstr "所有壓縮檔將被解壓到目標目錄中。"
+
+#: ulng.rshintextractseparatefolderon
+msgid "Each archive will be unpacked into its own subdirectory named after the archive."
+msgstr "每個壓縮檔將被解壓到以壓縮檔命名的獨立子目錄中。"
+
+#: ulng.rshintextractseparatefoldersmart
+msgid "Smart mode: a subdirectory named after the archive is created only when the archive contains more than one file or folder at its root."
+msgstr "智慧模式：僅當壓縮檔根目錄包含多個檔案或資料夾時，才建立以壓縮檔命名的子目錄。"
+
 #: ulng.rshotdirforcesortingorderchoices
 msgid "none;Name, a-z;Name, z-a;Ext, a-z;Ext, z-a;Size 9-0;Size 0-9;Date 9-0;Date 0-9"
 msgstr ""

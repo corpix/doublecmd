@@ -11413,6 +11413,34 @@ msgstr "Türü"
 msgid "Error creating hardlink."
 msgstr "Sabit bağlantı oluşturma hatası."
 
+#: ulng.rshintextractoverwriteoff
+msgid "Existing files in the destination will be kept; you will be prompted for each conflict."
+msgstr "Hedefteki mevcut dosyalar korunacak; her çakışmada size sorulacak."
+
+#: ulng.rshintextractoverwriteon
+msgid "Existing files in the destination will be overwritten without prompting."
+msgstr "Hedefteki mevcut dosyaların üzerine sormadan yazılacak."
+
+#: ulng.rshintextractpathoff
+msgid "Files will be unpacked directly into the destination directory, without preserving the directory structure stored in the archive."
+msgstr "Dosyalar, arşivde saklanan dizin yapısı korunmadan doğrudan hedef dizine açılacak."
+
+#: ulng.rshintextractpathon
+msgid "Directory structure stored in the archive will be preserved when unpacking."
+msgstr "Arşivde saklanan dizin yapısı açma sırasında korunacak."
+
+#: ulng.rshintextractseparatefolderoff
+msgid "All archives will be unpacked into the destination directory."
+msgstr "Tüm arşivler hedef dizine açılacak."
+
+#: ulng.rshintextractseparatefolderon
+msgid "Each archive will be unpacked into its own subdirectory named after the archive."
+msgstr "Her arşiv, arşiv adıyla adlandırılmış kendi alt dizinine açılacak."
+
+#: ulng.rshintextractseparatefoldersmart
+msgid "Smart mode: a subdirectory named after the archive is created only when the archive contains more than one file or folder at its root."
+msgstr "Akıllı kip: arşiv kökünde birden fazla dosya veya klasör varsa, arşiv adıyla adlandırılmış bir alt dizin oluşturulur."
+
 #: ulng.rshotdirforcesortingorderchoices
 msgid "none;Name, a-z;Name, z-a;Ext, a-z;Ext, z-a;Size 9-0;Size 0-9;Date 9-0;Date 0-9"
 msgstr ""

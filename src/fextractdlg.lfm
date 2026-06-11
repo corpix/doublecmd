@@ -144,6 +144,8 @@ inherited frmExtractDlg: TfrmExtractDlg
         AllowGrayed = True
         BorderSpacing.Top = 2
         Caption = 'Unpack each archive to a &separate subdir (name of the archive)'
+        OnChange = cbInSeparateFolderChange
+        ShowHint = True
         TabOrder = 0
       end
       object cbExtractPath: TCheckBox
@@ -155,6 +157,7 @@ inherited frmExtractDlg: TfrmExtractDlg
         Caption = '&Unpack path names if stored with files'
         Checked = True
         OnChange = cbExtractPathChange
+        ShowHint = True
         State = cbChecked
         TabOrder = 1
       end
@@ -166,6 +169,8 @@ inherited frmExtractDlg: TfrmExtractDlg
         Width = 446
         Caption = 'O&verwrite existing files'
         Checked = True
+        OnChange = cbOverwriteChange
+        ShowHint = True
         State = cbChecked
         TabOrder = 2
       end

@@ -11720,6 +11720,34 @@ msgstr "Tipus"
 msgid "Error creating hardlink."
 msgstr "Error creant l'enllaç fort"
 
+#: ulng.rshintextractoverwriteoff
+msgid "Existing files in the destination will be kept; you will be prompted for each conflict."
+msgstr "Els fitxers existents a la destinació es conservaran; se us preguntarà per cada conflicte."
+
+#: ulng.rshintextractoverwriteon
+msgid "Existing files in the destination will be overwritten without prompting."
+msgstr "Els fitxers existents a la destinació se sobreescriuran sense preguntar."
+
+#: ulng.rshintextractpathoff
+msgid "Files will be unpacked directly into the destination directory, without preserving the directory structure stored in the archive."
+msgstr "Els fitxers es desempaquetaran directament al directori de destinació, sense conservar l'estructura de directoris emmagatzemada a l'arxiu."
+
+#: ulng.rshintextractpathon
+msgid "Directory structure stored in the archive will be preserved when unpacking."
+msgstr "L'estructura de directoris emmagatzemada a l'arxiu es conservarà en desempaquetar."
+
+#: ulng.rshintextractseparatefolderoff
+msgid "All archives will be unpacked into the destination directory."
+msgstr "Tots els arxius es desempaquetaran al directori de destinació."
+
+#: ulng.rshintextractseparatefolderon
+msgid "Each archive will be unpacked into its own subdirectory named after the archive."
+msgstr "Cada arxiu es desempaquetarà en el seu propi subdirectori amb el nom de l'arxiu."
+
+#: ulng.rshintextractseparatefoldersmart
+msgid "Smart mode: a subdirectory named after the archive is created only when the archive contains more than one file or folder at its root."
+msgstr "Mode intel·ligent: només es crea un subdirectori amb el nom de l'arxiu si l'arxiu conté més d'un fitxer o carpeta a l'arrel."
+
 #: ulng.rshotdirforcesortingorderchoices
 msgid "none;Name, a-z;Name, z-a;Ext, a-z;Ext, z-a;Size 9-0;Size 0-9;Date 9-0;Date 0-9"
 msgstr ""

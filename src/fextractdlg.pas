@@ -47,11 +47,16 @@ type
     lblFileMask: TLabel;
     pnlCheckBoxes: TPanel;
     procedure cbExtractPathChange(Sender: TObject);
+    procedure cbInSeparateFolderChange(Sender: TObject);
+    procedure cbOverwriteChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
   private
     { private declarations }
     FArcType: String;
     procedure SwitchOptions;
+    procedure UpdateInSeparateFolderHint;
+    procedure UpdateExtractPathHint;
+    procedure UpdateOverwriteHint;
     procedure ExtractArchive(ArchiveFileSource: IArchiveFileSource; TargetFileSource: IFileSource;
                              const TargetPath, TargetMask: String; QueueId: TOperationsManagerQueueIdentifier);
   protected
@@ -211,11 +216,50 @@ procedure TfrmExtractDlg.FormCreate(Sender: TObject);
 begin
   InitPropStorage(Self);
   cbOverwrite.Checked := gExtractOverwrite;
+  UpdateInSeparateFolderHint;
+  UpdateExtractPathHint;
+  UpdateOverwriteHint;
 end;
 
 procedure TfrmExtractDlg.cbExtractPathChange(Sender: TObject);
 begin
+  UpdateExtractPathHint;
   SwitchOptions;
+end;
+
+procedure TfrmExtractDlg.cbInSeparateFolderChange(Sender: TObject);
+begin
+  UpdateInSeparateFolderHint;
+end;
+
+procedure TfrmExtractDlg.cbOverwriteChange(Sender: TObject);
+begin
+  UpdateOverwriteHint;
+end;
+
+procedure TfrmExtractDlg.UpdateInSeparateFolderHint;
+begin
+  case cbInSeparateFolder.State of
+    cbChecked:   cbInSeparateFolder.Hint := rsHintExtractSeparateFolderOn;
+    cbGrayed:    cbInSeparateFolder.Hint := rsHintExtractSeparateFolderSmart;
+    cbUnchecked: cbInSeparateFolder.Hint := rsHintExtractSeparateFolderOff;
+  end;
+end;
+
+procedure TfrmExtractDlg.UpdateExtractPathHint;
+begin
+  if cbExtractPath.Checked then
+    cbExtractPath.Hint := rsHintExtractPathOn
+  else
+    cbExtractPath.Hint := rsHintExtractPathOff;
+end;
+
+procedure TfrmExtractDlg.UpdateOverwriteHint;
+begin
+  if cbOverwrite.Checked then
+    cbOverwrite.Hint := rsHintExtractOverwriteOn
+  else
+    cbOverwrite.Hint := rsHintExtractOverwriteOff;
 end;
 
 procedure TfrmExtractDlg.SwitchOptions;

@@ -10743,6 +10743,34 @@ msgstr "Typ"
 msgid "Error creating hardlink."
 msgstr "Chyba pri vytváraní hardlinku."
 
+#: ulng.rshintextractoverwriteoff
+msgid "Existing files in the destination will be kept; you will be prompted for each conflict."
+msgstr "Existujúce súbory v cieli sa zachovajú; pri každom konflikte budete opýtaní."
+
+#: ulng.rshintextractoverwriteon
+msgid "Existing files in the destination will be overwritten without prompting."
+msgstr "Existujúce súbory v cieli sa prepíšu bez opýtania."
+
+#: ulng.rshintextractpathoff
+msgid "Files will be unpacked directly into the destination directory, without preserving the directory structure stored in the archive."
+msgstr "Súbory sa rozbalia priamo do cieľového adresára, bez zachovania štruktúry adresárov uloženej v archíve."
+
+#: ulng.rshintextractpathon
+msgid "Directory structure stored in the archive will be preserved when unpacking."
+msgstr "Pri rozbaľovaní sa zachová štruktúra adresárov uložená v archíve."
+
+#: ulng.rshintextractseparatefolderoff
+msgid "All archives will be unpacked into the destination directory."
+msgstr "Všetky archívy sa rozbalia do cieľového adresára."
+
+#: ulng.rshintextractseparatefolderon
+msgid "Each archive will be unpacked into its own subdirectory named after the archive."
+msgstr "Každý archív sa rozbalí do vlastného podadresára pomenovaného podľa archívu."
+
+#: ulng.rshintextractseparatefoldersmart
+msgid "Smart mode: a subdirectory named after the archive is created only when the archive contains more than one file or folder at its root."
+msgstr "Inteligentný režim: podadresár pomenovaný podľa archívu sa vytvorí len vtedy, keď archív obsahuje viac ako jeden súbor alebo priečinok v koreni."
+
 #: ulng.rshotdirforcesortingorderchoices
 msgid "none;Name, a-z;Name, z-a;Ext, a-z;Ext, z-a;Size 9-0;Size 0-9;Date 9-0;Date 0-9"
 msgstr "žiadne;Názov, a-z;Názov, z-a;Príp., a-z;Príp., z-a;Veľkosť 9-0;Veľkosť 0-9;Dátum 9-0;Dátum 0-9"

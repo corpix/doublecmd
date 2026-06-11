@@ -11245,6 +11245,34 @@ msgstr "Вид"
 msgid "Error creating hardlink."
 msgstr "Грешка при създаване на твърда връзка."
 
+#: ulng.rshintextractoverwriteoff
+msgid "Existing files in the destination will be kept; you will be prompted for each conflict."
+msgstr "Съществуващите файлове в целта ще бъдат запазени; за всеки конфликт ще бъдете попитани."
+
+#: ulng.rshintextractoverwriteon
+msgid "Existing files in the destination will be overwritten without prompting."
+msgstr "Съществуващите файлове в целта ще бъдат презаписани без потвърждение."
+
+#: ulng.rshintextractpathoff
+msgid "Files will be unpacked directly into the destination directory, without preserving the directory structure stored in the archive."
+msgstr "Файловете ще бъдат разопаковани директно в целевата директория, без да се запазва структурата на директориите от архива."
+
+#: ulng.rshintextractpathon
+msgid "Directory structure stored in the archive will be preserved when unpacking."
+msgstr "При разопаковане ще бъде запазена структурата на директориите от архива."
+
+#: ulng.rshintextractseparatefolderoff
+msgid "All archives will be unpacked into the destination directory."
+msgstr "Всички архиви ще бъдат разопаковани в целевата директория."
+
+#: ulng.rshintextractseparatefolderon
+msgid "Each archive will be unpacked into its own subdirectory named after the archive."
+msgstr "Всеки архив ще бъде разопакован в собствена поддиректория с името на архива."
+
+#: ulng.rshintextractseparatefoldersmart
+msgid "Smart mode: a subdirectory named after the archive is created only when the archive contains more than one file or folder at its root."
+msgstr "Интелигентен режим: поддиректория с името на архива се създава само когато архивът съдържа повече от един файл или папка в корена."
+
 #: ulng.rshotdirforcesortingorderchoices
 msgid "none;Name, a-z;Name, z-a;Ext, a-z;Ext, z-a;Size 9-0;Size 0-9;Date 9-0;Date 0-9"
 msgstr ""

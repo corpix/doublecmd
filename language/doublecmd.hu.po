@@ -10745,6 +10745,34 @@ msgstr "Típus"
 msgid "Error creating hardlink."
 msgstr "Hiba a hardlink létrehozásakor."
 
+#: ulng.rshintextractoverwriteoff
+msgid "Existing files in the destination will be kept; you will be prompted for each conflict."
+msgstr "A célhelyen lévő meglévő fájlok megmaradnak; minden ütközésnél a program rákérdez."
+
+#: ulng.rshintextractoverwriteon
+msgid "Existing files in the destination will be overwritten without prompting."
+msgstr "A célhelyen lévő meglévő fájlok kérdezés nélkül felülíródnak."
+
+#: ulng.rshintextractpathoff
+msgid "Files will be unpacked directly into the destination directory, without preserving the directory structure stored in the archive."
+msgstr "A fájlok közvetlenül a célkönyvtárba lesznek kicsomagolva, az archívumban tárolt könyvtárszerkezet megőrzése nélkül."
+
+#: ulng.rshintextractpathon
+msgid "Directory structure stored in the archive will be preserved when unpacking."
+msgstr "Kicsomagoláskor megmarad az archívumban tárolt könyvtárszerkezet."
+
+#: ulng.rshintextractseparatefolderoff
+msgid "All archives will be unpacked into the destination directory."
+msgstr "Az összes archívum a célkönyvtárba lesz kicsomagolva."
+
+#: ulng.rshintextractseparatefolderon
+msgid "Each archive will be unpacked into its own subdirectory named after the archive."
+msgstr "Minden archívum a saját, az archívumról elnevezett alkönyvtárába lesz kicsomagolva."
+
+#: ulng.rshintextractseparatefoldersmart
+msgid "Smart mode: a subdirectory named after the archive is created only when the archive contains more than one file or folder at its root."
+msgstr "Intelligens mód: az archívumról elnevezett alkönyvtár csak akkor jön létre, ha az archívum gyökerében több mint egy fájl vagy mappa van."
+
 #: ulng.rshotdirforcesortingorderchoices
 msgid "none;Name, a-z;Name, z-a;Ext, a-z;Ext, z-a;Size 9-0;Size 0-9;Date 9-0;Date 0-9"
 msgstr "nincs;Név, a-z;Név, z-a;Kit, a-z;Kit, z-a;Méret 9-0;Méret 0-9;Dátum 9-0;Dátum 0-9"

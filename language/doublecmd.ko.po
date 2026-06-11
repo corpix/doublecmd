@@ -10735,6 +10735,34 @@ msgstr "유형"
 msgid "Error creating hardlink."
 msgstr "하드 링크 만들기 오류입니다."
 
+#: ulng.rshintextractoverwriteoff
+msgid "Existing files in the destination will be kept; you will be prompted for each conflict."
+msgstr "대상의 기존 파일을 유지합니다. 충돌이 있을 때마다 확인을 요청합니다."
+
+#: ulng.rshintextractoverwriteon
+msgid "Existing files in the destination will be overwritten without prompting."
+msgstr "대상의 기존 파일을 묻지 않고 덮어씁니다."
+
+#: ulng.rshintextractpathoff
+msgid "Files will be unpacked directly into the destination directory, without preserving the directory structure stored in the archive."
+msgstr "보관 파일에 저장된 디렉터리 구조를 유지하지 않고, 파일을 대상 디렉터리에 바로 풉니다."
+
+#: ulng.rshintextractpathon
+msgid "Directory structure stored in the archive will be preserved when unpacking."
+msgstr "보관 파일에 저장된 디렉터리 구조가 풀 때 유지됩니다."
+
+#: ulng.rshintextractseparatefolderoff
+msgid "All archives will be unpacked into the destination directory."
+msgstr "모든 보관 파일이 대상 디렉터리에 풀립니다."
+
+#: ulng.rshintextractseparatefolderon
+msgid "Each archive will be unpacked into its own subdirectory named after the archive."
+msgstr "각 보관 파일이 보관 파일 이름의 하위 디렉터리에 따로 풀립니다."
+
+#: ulng.rshintextractseparatefoldersmart
+msgid "Smart mode: a subdirectory named after the archive is created only when the archive contains more than one file or folder at its root."
+msgstr "스마트 모드: 보관 파일의 루트에 둘 이상의 파일이나 폴더가 있을 때만 보관 파일 이름의 하위 디렉터리가 만들어집니다."
+
 #: ulng.rshotdirforcesortingorderchoices
 msgid "none;Name, a-z;Name, z-a;Ext, a-z;Ext, z-a;Size 9-0;Size 0-9;Date 9-0;Date 0-9"
 msgstr "없음;파일, a-z;파일, z-a;확장자, a-z;확장자, z-a;크기 9-0;크기 0-9;날짜 9-0;날짜 0-9"

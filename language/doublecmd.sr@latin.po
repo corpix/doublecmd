@@ -11259,6 +11259,34 @@ msgstr "Vrsta"
 msgid "Error creating hardlink."
 msgstr "Desila se greška pri stvaranju čvrste veze"
 
+#: ulng.rshintextractoverwriteoff
+msgid "Existing files in the destination will be kept; you will be prompted for each conflict."
+msgstr "Postojeće datoteke u odredištu biće sačuvane; za svaki sukob će se postaviti pitanje."
+
+#: ulng.rshintextractoverwriteon
+msgid "Existing files in the destination will be overwritten without prompting."
+msgstr "Postojeće datoteke u odredištu biće prepisane bez pitanja."
+
+#: ulng.rshintextractpathoff
+msgid "Files will be unpacked directly into the destination directory, without preserving the directory structure stored in the archive."
+msgstr "Datoteke će biti raspakovane direktno u odredišni direktorijum, bez čuvanja strukture direktorijuma iz arhive."
+
+#: ulng.rshintextractpathon
+msgid "Directory structure stored in the archive will be preserved when unpacking."
+msgstr "Pri raspakivanju biće sačuvana struktura direktorijuma iz arhive."
+
+#: ulng.rshintextractseparatefolderoff
+msgid "All archives will be unpacked into the destination directory."
+msgstr "Svi arhivi biće raspakovani u odredišni direktorijum."
+
+#: ulng.rshintextractseparatefolderon
+msgid "Each archive will be unpacked into its own subdirectory named after the archive."
+msgstr "Svaki arhiv biće raspakovan u zaseban poddirektorijum sa imenom arhive."
+
+#: ulng.rshintextractseparatefoldersmart
+msgid "Smart mode: a subdirectory named after the archive is created only when the archive contains more than one file or folder at its root."
+msgstr "Pametan režim: poddirektorijum sa imenom arhive se pravi samo ako arhiva u korenu sadrži više od jedne datoteke ili fascikle."
+
 #: ulng.rshotdirforcesortingorderchoices
 msgid "none;Name, a-z;Name, z-a;Ext, a-z;Ext, z-a;Size 9-0;Size 0-9;Date 9-0;Date 0-9"
 msgstr ""

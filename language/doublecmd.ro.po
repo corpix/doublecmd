@@ -11073,6 +11073,34 @@ msgstr "Tip"
 msgid "Error creating hardlink."
 msgstr "Eroare la crearea legăturii dure."
 
+#: ulng.rshintextractoverwriteoff
+msgid "Existing files in the destination will be kept; you will be prompted for each conflict."
+msgstr "Fișierele existente în destinație vor fi păstrate; veți fi întrebat pentru fiecare conflict."
+
+#: ulng.rshintextractoverwriteon
+msgid "Existing files in the destination will be overwritten without prompting."
+msgstr "Fișierele existente în destinație vor fi suprascrise fără confirmare."
+
+#: ulng.rshintextractpathoff
+msgid "Files will be unpacked directly into the destination directory, without preserving the directory structure stored in the archive."
+msgstr "Fișierele vor fi dezarhivate direct în directorul de destinație, fără a păstra structura de directoare stocată în arhivă."
+
+#: ulng.rshintextractpathon
+msgid "Directory structure stored in the archive will be preserved when unpacking."
+msgstr "La dezarhivare va fi păstrată structura de directoare stocată în arhivă."
+
+#: ulng.rshintextractseparatefolderoff
+msgid "All archives will be unpacked into the destination directory."
+msgstr "Toate arhivele vor fi dezarhivate în directorul de destinație."
+
+#: ulng.rshintextractseparatefolderon
+msgid "Each archive will be unpacked into its own subdirectory named after the archive."
+msgstr "Fiecare arhivă va fi dezarhivată într-un subdirector propriu cu numele arhivei."
+
+#: ulng.rshintextractseparatefoldersmart
+msgid "Smart mode: a subdirectory named after the archive is created only when the archive contains more than one file or folder at its root."
+msgstr "Mod inteligent: un subdirector cu numele arhivei este creat doar atunci când arhiva conține mai mult de un fișier sau dosar în rădăcină."
+
 #: ulng.rshotdirforcesortingorderchoices
 msgid "none;Name, a-z;Name, z-a;Ext, a-z;Ext, z-a;Size 9-0;Size 0-9;Date 9-0;Date 0-9"
 msgstr ""

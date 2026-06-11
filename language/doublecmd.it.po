@@ -10751,6 +10751,34 @@ msgstr "Tipo"
 msgid "Error creating hardlink."
 msgstr "Errore nella creazione dell'hardlink."
 
+#: ulng.rshintextractoverwriteoff
+msgid "Existing files in the destination will be kept; you will be prompted for each conflict."
+msgstr "I file esistenti nella destinazione verranno mantenuti; verrà richiesta conferma per ogni conflitto."
+
+#: ulng.rshintextractoverwriteon
+msgid "Existing files in the destination will be overwritten without prompting."
+msgstr "I file esistenti nella destinazione verranno sovrascritti senza chiedere conferma."
+
+#: ulng.rshintextractpathoff
+msgid "Files will be unpacked directly into the destination directory, without preserving the directory structure stored in the archive."
+msgstr "I file verranno estratti direttamente nella directory di destinazione, senza mantenere la struttura delle directory memorizzata nell'archivio."
+
+#: ulng.rshintextractpathon
+msgid "Directory structure stored in the archive will be preserved when unpacking."
+msgstr "La struttura delle directory memorizzata nell'archivio verrà mantenuta durante l'estrazione."
+
+#: ulng.rshintextractseparatefolderoff
+msgid "All archives will be unpacked into the destination directory."
+msgstr "Tutti gli archivi verranno estratti nella directory di destinazione."
+
+#: ulng.rshintextractseparatefolderon
+msgid "Each archive will be unpacked into its own subdirectory named after the archive."
+msgstr "Ogni archivio verrà estratto nella propria sottodirectory con il nome dell'archivio."
+
+#: ulng.rshintextractseparatefoldersmart
+msgid "Smart mode: a subdirectory named after the archive is created only when the archive contains more than one file or folder at its root."
+msgstr "Modalità intelligente: una sottodirectory con il nome dell'archivio viene creata solo se l'archivio contiene più di un file o cartella nella sua radice."
+
 #: ulng.rshotdirforcesortingorderchoices
 msgid "none;Name, a-z;Name, z-a;Ext, a-z;Ext, z-a;Size 9-0;Size 0-9;Date 9-0;Date 0-9"
 msgstr "nessuno;Nome, a-z;Nome, z-a;Est, a-z;Est, z-a;Dimensione 9-0;Dimensione 0-9;Data 9-0;Data 0-9"

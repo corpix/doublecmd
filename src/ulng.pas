@@ -395,6 +395,14 @@ resourcestring
   // wcx module messages
   rsMsgSelLocNextVol = 'Please select location of next volume';
   rsMsgNextVolUnpack = 'Next volume will be unpacked';
+  // extract dialog checkbox tooltips
+  rsHintExtractSeparateFolderOff = 'All archives will be unpacked into the destination directory.';
+  rsHintExtractSeparateFolderOn = 'Each archive will be unpacked into its own subdirectory named after the archive.';
+  rsHintExtractSeparateFolderSmart = 'Smart mode: a subdirectory named after the archive is created only when the archive contains more than one file or folder at its root.';
+  rsHintExtractPathOn = 'Directory structure stored in the archive will be preserved when unpacking.';
+  rsHintExtractPathOff = 'Files will be unpacked directly into the destination directory, without preserving the directory structure stored in the archive.';
+  rsHintExtractOverwriteOn = 'Existing files in the destination will be overwritten without prompting.';
+  rsHintExtractOverwriteOff = 'Existing files in the destination will be kept; you will be prompted for each conflict.';
   // wcx module errors messages
   rsMsgErrEndArchive = 'No more files in archive';
   rsMsgErrNoMemory = 'Not enough memory';
