@@ -33,6 +33,10 @@ type
     FStatistics: TFileSourceCopyOperationStatistics; // local copy of statistics
     FRenamingFiles: Boolean;
     FRenameNameMask, FRenameExtMask: String;
+    FBatchArcHandle: TArcHandle;
+    FBatchFileNames: TStringList;
+    FBatchTargetFileNames: TStringList;
+    FBatchFileSizes: array of Int64;
 
     // Options.
     FExtractWithoutPath: Boolean;
@@ -65,6 +69,10 @@ type
     function SetDirsAttributes(const Paths: TStringHashListUtf8): Boolean;
 
     function DoFileExists(Header: TWcxHeader; var AbsoluteTargetFileName: String): TFileSourceOperationOptionFileExists;
+    function ProcessFilesBatch(ArcHandle: TArcHandle; WcxModule: TWcxModule;
+                               Files: TFiles; MaskList: TMaskList): Integer;
+    function GetBatchFileInfo(const AFileName: String; out ATargetFileName: String;
+                              out AFileSize: Int64): Boolean;
 	
     procedure ShowError(const sMessage: String; iError: Integer; logOptions: TLogOptions = []);
     procedure LogMessage(const sMessage: String; logOptions: TLogOptions; logMsgType: TLogMsgType);
@@ -73,6 +81,8 @@ type
     FCurrentFilePath: String;
     FCurrentTargetFilePath: String;
     procedure QuestionActionHandler(Action: TFileSourceOperationUIAction);
+    procedure FileSourceOperationStateChangedNotify(Operation: TFileSourceOperation;
+                                                    AState: TFileSourceOperationState);
 
     procedure SetProcessDataProc(hArcData: TArcHandle);
 
@@ -117,6 +127,10 @@ threadvar
 
 function ProcessDataProc(WcxCopyOutOperation: TWcxArchiveCopyOutOperation;
                          FileName: String; Size: LongInt; UpdateName: Pointer): LongInt;
+var
+  TargetFileName: String;
+  FileSize: Int64;
+  DoneFileEstimate: Int64;
 begin
   //DCDebug('Working (' + IntToStr(GetCurrentThreadId) + ') ' + FileName + ' Size = ' + IntToStr(Size));
 
@@ -132,6 +146,12 @@ begin
       // Update file name
       if Assigned(UpdateName) then begin
         CurrentFileFrom:= FileName;
+        if WcxCopyOutOperation.GetBatchFileInfo(FileName, TargetFileName, FileSize) then
+        begin
+          CurrentFileTo:= TargetFileName;
+          CurrentFileTotalBytes:= FileSize;
+          CurrentFileDoneBytes:= 0;
+        end;
       end;
       // Get the number of bytes processed since the previous call
       if Size > 0 then
@@ -155,12 +175,25 @@ begin
           begin
             if (TotalBytes = 0) then TotalBytes:= -100;
             DoneBytes := Abs(TotalBytes) * Int64(-Size) div 100;
+            if (WcxCopyOutOperation.FBatchArcHandle <> 0) and
+               (TotalFiles > 0) and (TotalBytes <> 0) and (DoneBytes > 0) then
+            begin
+              DoneFileEstimate:= (Abs(DoneBytes) * TotalFiles + Abs(TotalBytes) - 1) div Abs(TotalBytes);
+              if Abs(DoneBytes) < Abs(TotalBytes) then
+                DoneFileEstimate:= Min(DoneFileEstimate, TotalFiles - 1);
+              DoneFiles:= Max(DoneFiles, DoneFileEstimate);
+            end;
           end
         // Current file percent
         else if (Size >= -1100) and (Size <= -1000) then
           begin
             if (CurrentFileTotalBytes = 0) then CurrentFileTotalBytes:= -100;
             CurrentFileDoneBytes := Abs(CurrentFileTotalBytes) * (Int64(-Size) - 1000) div 100;
+          end
+        // Number of files completed by a batch-capable plugin.
+        else if (Size <= -2000) and (WcxCopyOutOperation.FBatchArcHandle <> 0) then
+          begin
+            DoneFiles:= Max(DoneFiles, Min(TotalFiles, Int64(-Size) - 2000));
           end;
       end;
 
@@ -202,6 +235,9 @@ begin
   FWcxArchiveFileSource := aSourceFileSource as IWcxArchiveFileSource;
   FFileExistsOption := fsoofeNone;
   FExtractWithoutPath := False;
+  FBatchArcHandle := 0;
+  FBatchFileNames := TStringList.Create;
+  FBatchTargetFileNames := TStringList.Create;
 
   inherited Create(aSourceFileSource, aTargetFileSource, theSourceFiles, aTargetPath);
 
@@ -210,6 +246,8 @@ end;
 
 destructor TWcxArchiveCopyOutOperation.Destroy;
 begin
+  FreeAndNil(FBatchFileNames);
+  FreeAndNil(FBatchTargetFileNames);
   inherited Destroy;
 end;
 
@@ -258,6 +296,11 @@ begin
   // Check rename mask
   FRenamingFiles := (RenameMask <> '*.*') and (RenameMask <> '');
   if FRenamingFiles then SplitFileMask(RenameMask, FRenameNameMask, FRenameExtMask);
+
+  if FWcxArchiveFileSource.WcxModule.WcxCanProcessFiles then
+    AddStateChangedListener([fsosStarting, fsosPausing, fsosStopping],
+                            @FileSourceOperationStateChangedNotify);
+
   // Get initialized statistics; then we change only what is needed.
   FStatistics := RetrieveStatistics;
 end;
@@ -306,6 +349,21 @@ begin
 
     SetProcessDataProc(ArcHandle);
     WcxModule.WcxSetChangeVolProc(ArcHandle);
+    FBatchArcHandle := ArcHandle;
+
+    if WcxModule.WcxCanProcessFiles then
+    begin
+      iResult := ProcessFilesBatch(ArcHandle, WcxModule, Files, MaskList);
+      if iResult <> E_SUCCESS then
+      begin
+        if iResult = E_EABORTED then RaiseAbortOperation;
+
+        ShowError(Format(rsMsgLogError + rsMsgLogExtract,
+                         [FWcxArchiveFileSource.ArchiveFileName + ' : ' +
+                          GetErrorMsg(iResult)]), iResult, [log_arc_op]);
+      end;
+      Exit;
+    end;
 
     while (WcxModule.ReadWCXHeader(ArcHandle, Header) = E_SUCCESS) do
     try
@@ -397,6 +455,7 @@ begin
     // Close archive, ignore function result, see:
     // https://www.ghisler.ch/board/viewtopic.php?p=299809#p299809
     iResult := WcxModule.CloseArchive(ArcHandle);
+    FBatchArcHandle := 0;
     // Execute after CloseArchive
     if (ExceptObject = nil) and (FExtractWithoutPath = False) then
     begin
@@ -601,6 +660,153 @@ begin
     finally
       aFile.Free;
     end;
+  end;
+end;
+
+procedure TWcxArchiveCopyOutOperation.FileSourceOperationStateChangedNotify(
+  Operation: TFileSourceOperation; AState: TFileSourceOperationState);
+begin
+  if FBatchArcHandle = 0 then Exit;
+
+  case AState of
+    fsosStarting:
+      FWcxArchiveFileSource.WcxModule.WcxResumeProcessFiles(FBatchArcHandle);
+    fsosPausing:
+      FWcxArchiveFileSource.WcxModule.WcxPauseProcessFiles(FBatchArcHandle);
+    fsosStopping:
+      FWcxArchiveFileSource.WcxModule.WcxStopProcessFiles(FBatchArcHandle);
+  end;
+end;
+
+function TWcxArchiveCopyOutOperation.ProcessFilesBatch(ArcHandle: TArcHandle;
+  WcxModule: TWcxModule; Files: TFiles; MaskList: TMaskList): Integer;
+var
+  I, ItemCount: Integer;
+  Header: TWcxHeader;
+  TargetFileName: String;
+  BatchTotalBytes: Int64;
+  ArcFileList: TList;
+  Items: array of TWcxBatchProcessItemW;
+  SourceNames, DestNames: array of WideString;
+  SourceLogNames, DestLogNames: array of String;
+begin
+  Result := E_SUCCESS;
+  ItemCount := 0;
+  BatchTotalBytes := 0;
+  FBatchFileNames.Clear;
+  FBatchTargetFileNames.Clear;
+  SetLength(FBatchFileSizes, 0);
+  ArcFileList := FWcxArchiveFileSource.ArchiveFileList.Clone;
+  try
+    for I := 0 to ArcFileList.Count - 1 do
+    begin
+      CheckOperationState;
+
+      Header := TWcxHeader(ArcFileList[I]);
+      if  (not FPS_ISDIR(Header.FileAttr))
+      and MatchesFileList(Files, Header.FileName)
+      and ((MaskList = nil) or MaskList.Matches(ExtractFileNameEx(Header.FileName))) then
+      begin
+        if FExtractWithoutPath then
+          TargetFileName := ExtractFileNameEx(Header.FileName)
+        else
+          TargetFileName := ExtractDirLevel(Files.Path, Header.FileName);
+
+        if FRenamingFiles then
+        begin
+          TargetFileName := ExtractFilePathEx(TargetFileName) +
+                            ApplyRenameMask(ExtractFileNameEx(TargetFileName),
+                                            FRenameNameMask, FRenameExtMask);
+        end;
+
+        TargetFileName := TargetPath + ReplaceInvalidChars(TargetFileName);
+
+        with FStatistics do
+        begin
+          CurrentFileFrom := Header.FileName;
+          CurrentFileTo := TargetFileName;
+          if (Header.UnpSize < 0) then
+            CurrentFileTotalBytes := 0
+          else
+            CurrentFileTotalBytes := Header.UnpSize;
+          CurrentFileDoneBytes := -1;
+          UpdateStatistics(FStatistics);
+        end;
+
+        if (DoFileExists(Header, TargetFileName) = fsoofeOverwrite) then
+        begin
+          SetLength(Items, ItemCount + 1);
+          SetLength(SourceNames, ItemCount + 1);
+          SetLength(DestNames, ItemCount + 1);
+          SetLength(SourceLogNames, ItemCount + 1);
+          SetLength(DestLogNames, ItemCount + 1);
+
+          SourceLogNames[ItemCount] := Header.FileName;
+          DestLogNames[ItemCount] := TargetFileName;
+          FBatchFileNames.Add(Header.FileName);
+          FBatchTargetFileNames.Add(TargetFileName);
+          SetLength(FBatchFileSizes, ItemCount + 1);
+          FBatchFileSizes[ItemCount] := Max(Header.UnpSize, Int64(0));
+          Inc(BatchTotalBytes, FBatchFileSizes[ItemCount]);
+          SourceNames[ItemCount] := CeUtf8ToUtf16(Header.FileName);
+          DestNames[ItemCount] := CeUtf8ToUtf16(TargetFileName);
+          Items[ItemCount].ArchiveIndex := I;
+          Items[ItemCount].SourceName := PWideChar(SourceNames[ItemCount]);
+          Items[ItemCount].DestName := PWideChar(DestNames[ItemCount]);
+          Inc(ItemCount);
+        end;
+      end;
+    end;
+
+    with FStatistics do
+    begin
+      TotalFiles := ItemCount;
+      TotalBytes := BatchTotalBytes;
+      DoneFiles := 0;
+      DoneBytes := 0;
+    end;
+    UpdateStatistics(FStatistics);
+
+    if ItemCount = 0 then Exit(E_SUCCESS);
+
+    Result := WcxModule.WcxProcessFiles(ArcHandle, @Items[0], ItemCount);
+    if Result = E_SUCCESS then
+    begin
+      with FStatistics do
+      begin
+        CurrentFileFrom := SourceLogNames[ItemCount - 1];
+        CurrentFileTo := DestLogNames[ItemCount - 1];
+        CurrentFileTotalBytes := FBatchFileSizes[ItemCount - 1];
+        CurrentFileDoneBytes := CurrentFileTotalBytes;
+        DoneFiles := Max(DoneFiles, Int64(ItemCount));
+      end;
+      UpdateStatistics(FStatistics);
+      for I := 0 to ItemCount - 1 do
+      begin
+        LogMessage(Format(rsMsgLogSuccess + rsMsgLogExtract,
+                          [FWcxArchiveFileSource.ArchiveFileName + PathDelim +
+                           SourceLogNames[I] + ' -> ' + DestLogNames[I]]),
+                   [log_arc_op], lmtSuccess);
+      end;
+    end;
+  finally
+    ArcFileList.Free;
+  end;
+end;
+
+function TWcxArchiveCopyOutOperation.GetBatchFileInfo(const AFileName: String;
+  out ATargetFileName: String; out AFileSize: Int64): Boolean;
+var
+  Index: Integer;
+begin
+  Result := False;
+  Index := FBatchFileNames.IndexOf(AFileName);
+  if (Index >= 0) and (Index < Length(FBatchFileSizes)) and
+     (Index < FBatchTargetFileNames.Count) then
+  begin
+    ATargetFileName := FBatchTargetFileNames[Index];
+    AFileSize := FBatchFileSizes[Index];
+    Result := True;
   end;
 end;
 
@@ -814,4 +1020,3 @@ begin
 end;
 
 end.
-

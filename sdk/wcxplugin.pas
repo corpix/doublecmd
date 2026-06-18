@@ -117,6 +117,13 @@ type
   TPkCryptProcW = function(CryptoNr: Integer; Mode: Integer; ArchiveName,
                            Password: PWideChar; MaxLen: Integer): Integer; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
 
+  PWcxBatchProcessItemW = ^TWcxBatchProcessItemW;
+  TWcxBatchProcessItemW = packed record
+    ArchiveIndex: LongInt;       { Zero-based index in ReadHeader order. }
+    SourceName: PWideChar;       { Archive item name, for progress display. }
+    DestName: PWideChar;         { Absolute extraction target path. }
+  end;
+
 type
   PHeaderData = ^THeaderData;
   THeaderData=packed record
@@ -213,5 +220,4 @@ type
 implementation
 
 end.
-
 

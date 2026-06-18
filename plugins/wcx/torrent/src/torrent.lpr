@@ -29,66 +29,191 @@ uses
   cthreads,
 {$ENDIF}
   FPCAdds,
-  Classes, SysUtils, Process, TorrentFile, WcxPlugin, DCDateTimeUtils,
-  DCClassesUtf8, DCConvertEncoding, DCOSUtils;
+  Base64, Classes, SysUtils, Process, fphttpclient, fpjson, jsonparser,
+  TorrentFile, WcxPlugin, DCDateTimeUtils, DCClassesUtf8, DCConvertEncoding,
+  DCOSUtils;
 
 type
+  PWcxBatchProcessItemWArray = ^TWcxBatchProcessItemWArray;
+  TWcxBatchProcessItemWArray = array[0..(MaxInt div SizeOf(TWcxBatchProcessItemW)) - 1] of TWcxBatchProcessItemW;
+
+  TTorrentBatchItem = record
+    ArchiveIndex: Integer;
+    SourceName: String;
+    DestName: String;
+    Length: Int64;
+  end;
+
   PTorrentHandle = ^TTorrentHandle;
   TTorrentHandle = record
    Index: Integer;
    Torrent: TTorrentFile;
    ArcName: String;
    DownloadDir: String;
+   RpcUrl: String;
+   RpcSecret: String;
+   Gid: String;
+   Process: TProcess;
+   StopRequested: Boolean;
+   PauseRequested: Boolean;
+   ProcessDataProc: TProcessDataProc;
+   ProcessDataProcW: TProcessDataProcW;
   end;
 
 const
   Aria2Executable = 'aria2c';
-  ProgressChunk = 1000000000;
 
-var
-  gProcessDataProc: TProcessDataProc = nil;
-  gProcessDataProcW: TProcessDataProcW = nil;
-
-function ReportProgress(const DisplayName: UnicodeString; Delta: Int64): LongInt;
+function CallProcessData(AHandle: PTorrentHandle; const DisplayName: UnicodeString;
+                         Size: LongInt; UpdateName: Boolean = True): LongInt;
 var
   AName: WideString;
-  Step: LongInt;
+  ANamePtr: PWideChar;
+  AAnsiName: AnsiString;
+  AAnsiNamePtr: PAnsiChar;
 begin
   Result:= 1;
   AName:= DisplayName;
-  while Delta > 0 do
+  if UpdateName then
+    ANamePtr:= PWideChar(AName)
+  else
+    ANamePtr:= nil;
+  if Assigned(AHandle.ProcessDataProcW) then
+    Result:= AHandle.ProcessDataProcW(ANamePtr, Size)
+  else if Assigned(AHandle.ProcessDataProc) then
   begin
-    if Delta > ProgressChunk then Step:= ProgressChunk else Step:= LongInt(Delta);
-    if Assigned(gProcessDataProcW) then
-      Result:= gProcessDataProcW(PWideChar(AName), Step)
-    else if Assigned(gProcessDataProc) then
-      Result:= gProcessDataProc(PAnsiChar(CeUtf16ToUtf8(DisplayName)), Step);
-    Dec(Delta, Step);
-    if Result = 0 then Exit;
+    if UpdateName then
+    begin
+      AAnsiName:= CeUtf16ToUtf8(DisplayName);
+      AAnsiNamePtr:= PAnsiChar(AAnsiName);
+    end
+    else
+      AAnsiNamePtr:= nil;
+    Result:= AHandle.ProcessDataProc(AAnsiNamePtr, Size);
   end;
 end;
 
-function ParseLastPercent(const S: String): Integer;
-var
-  I, J: Integer;
-  Num: String;
+function CreateRpcSecret: String;
 begin
-  Result:= -1;
-  for I:= System.Length(S) downto 1 do
-  begin
-    if S[I] = '%' then
+  Result:= IntToHex(Random(MaxInt), 8) + IntToHex(Random(MaxInt), 8) +
+           IntToHex(Random(MaxInt), 8) + IntToHex(Random(MaxInt), 8);
+end;
+
+function JsonRpcCall(AHandle: PTorrentHandle; const Method: String;
+                     Params: TJSONArray; out Response: TJSONObject): Boolean;
+var
+  Request: TJSONObject = nil;
+  Client: TFPHTTPClient = nil;
+  Body: TRawByteStringStream = nil;
+  Data: TJSONData = nil;
+  ResponseText: RawByteString;
+begin
+  Result:= False;
+  Response:= nil;
+  try
+    Request:= TJSONObject.Create;
+    Request.Add('jsonrpc', '2.0');
+    Request.Add('id', 'dc');
+    Request.Add('method', Method);
+    if Assigned(Params) then
     begin
-      J:= I - 1;
-      Num:= '';
-      while (J >= 1) and (S[J] in ['0'..'9']) do
-      begin
-        Num:= S[J] + Num;
-        Dec(J);
-      end;
-      if (Num <> '') and (J >= 1) and (S[J] = '(') then
-        Exit(StrToIntDef(Num, -1));
+      Request.Add('params', Params);
+      Params:= nil;
+    end;
+
+    Body:= TRawByteStringStream.Create(Request.AsJSON);
+    Client:= TFPHTTPClient.Create(nil);
+    Client.AddHeader('Content-Type', 'application/json');
+    Client.RequestBody:= Body;
+    ResponseText:= Client.Post(AHandle.RpcUrl);
+
+    Data:= GetJSON(ResponseText);
+    if Data is TJSONObject then
+    begin
+      Response:= TJSONObject(Data);
+      Data:= nil;
+      Result:= not Assigned(Response.Find('error'));
+    end;
+  except
+    FreeAndNil(Response);
+  end;
+
+  if Assigned(Params) then Params.Free;
+  Body.Free;
+  Client.Free;
+  Request.Free;
+  Data.Free;
+end;
+
+function TokenParams(AHandle: PTorrentHandle): TJSONArray;
+begin
+  Result:= TJSONArray.Create;
+  Result.Add('token:' + AHandle.RpcSecret);
+end;
+
+function GidParams(AHandle: PTorrentHandle): TJSONArray;
+begin
+  Result:= TokenParams(AHandle);
+  Result.Add(AHandle.Gid);
+end;
+
+function JsonRpcSimple(AHandle: PTorrentHandle; const Method: String;
+                       Params: TJSONArray = nil): Boolean;
+var
+  Response: TJSONObject = nil;
+begin
+  Result:= JsonRpcCall(AHandle, Method, Params, Response);
+  Response.Free;
+end;
+
+function JsonRpcStringResult(AHandle: PTorrentHandle; const Method: String;
+                             Params: TJSONArray; out Value: String): Boolean;
+var
+  Response: TJSONObject = nil;
+begin
+  Result:= JsonRpcCall(AHandle, Method, Params, Response);
+  if Result then
+    Value:= Response.Get('result', EmptyStr);
+  Response.Free;
+end;
+
+function JsonRpcObjectResult(AHandle: PTorrentHandle; const Method: String;
+                             Params: TJSONArray; out Value: TJSONObject): Boolean;
+var
+  Response: TJSONObject = nil;
+  Data: TJSONData;
+begin
+  Result:= False;
+  Value:= nil;
+  if JsonRpcCall(AHandle, Method, Params, Response) then
+  begin
+    Data:= Response.Find('result');
+    if Data is TJSONObject then
+    begin
+      Value:= TJSONObject(Data.Clone);
+      Result:= True;
     end;
   end;
+  Response.Free;
+end;
+
+function JsonRpcArrayResult(AHandle: PTorrentHandle; const Method: String;
+                            Params: TJSONArray; out Value: TJSONArray): Boolean;
+var
+  Response: TJSONObject = nil;
+  Data: TJSONData;
+begin
+  Result:= False;
+  Value:= nil;
+  if JsonRpcCall(AHandle, Method, Params, Response) then
+  begin
+    Data:= Response.Find('result');
+    if Data is TJSONArray then
+    begin
+      Value:= TJSONArray(Data.Clone);
+      Result:= True;
+    end;
+  end;
+  Response.Free;
 end;
 
 function CreateDownloadDir: String;
@@ -119,6 +244,22 @@ begin
     FindClose(SR);
   end;
   mbRemoveDir(ADir);
+end;
+
+function ReadFileBase64(const AFileName: String): String;
+var
+  Stream: TFileStreamEx;
+  Buffer: RawByteString;
+begin
+  Stream:= TFileStreamEx.Create(AFileName, fmOpenRead or fmShareDenyNone);
+  try
+    SetLength(Buffer, Stream.Size);
+    if Stream.Size > 0 then
+      Stream.ReadBuffer(Buffer[1], Stream.Size);
+    Result:= EncodeStringBase64(Buffer);
+  finally
+    Stream.Free;
+  end;
 end;
 
 function MoveResult(const ASource, ADest: String): Boolean;
@@ -153,85 +294,321 @@ begin
   end;
 end;
 
+function TorrentDownloadPath(AHandle: PTorrentHandle; AFile: TTorrentSubFile): String;
+begin
+  if AHandle.Torrent.Multifile then
+    Result:= IncludeTrailingPathDelimiter(AHandle.DownloadDir) +
+             IncludeTrailingPathDelimiter(AHandle.Torrent.Name) +
+             AFile.Path + AFile.Name
+  else
+    Result:= IncludeTrailingPathDelimiter(AHandle.DownloadDir) +
+             AFile.Path + AFile.Name;
+end;
+
+function ReportTotalPercent(AHandle: PTorrentHandle; const DisplayName: String;
+                            Percent: Integer): LongInt;
+begin
+  if Percent < 1 then Percent:= 1;
+  if Percent > 100 then Percent:= 100;
+  Result:= CallProcessData(AHandle, CeUtf8ToUtf16(DisplayName), -Percent, False);
+end;
+
+function ReportCurrentPercent(AHandle: PTorrentHandle; const DisplayName: String;
+                              Percent: Integer): LongInt;
+begin
+  if Percent < 0 then Percent:= 0;
+  if Percent > 100 then Percent:= 100;
+  Result:= CallProcessData(AHandle, CeUtf8ToUtf16(DisplayName), -1000 - Percent);
+end;
+
+function ReportDoneFiles(AHandle: PTorrentHandle; Count: Integer): LongInt;
+begin
+  if Count < 0 then Count:= 0;
+  Result:= CallProcessData(AHandle, UnicodeString(''), -2000 - Count, False);
+end;
+
+function StartAria2(AHandle: PTorrentHandle): Boolean;
+var
+  I, J, Port: Integer;
+  Response: TJSONObject = nil;
+begin
+  Result:= False;
+  AHandle.RpcSecret:= CreateRpcSecret;
+  for I:= 1 to 10 do
+  begin
+    Port:= 1024 + Random(64000);
+    AHandle.RpcUrl:= 'http://127.0.0.1:' + IntToStr(Port) + '/jsonrpc';
+    AHandle.Process:= TProcess.Create(nil);
+    AHandle.Process.Executable:= Aria2Executable;
+    AHandle.Process.Parameters.Add('--enable-rpc=true');
+    AHandle.Process.Parameters.Add('--rpc-listen-all=false');
+    AHandle.Process.Parameters.Add('--rpc-listen-port=' + IntToStr(Port));
+    AHandle.Process.Parameters.Add('--rpc-secret=' + AHandle.RpcSecret);
+    AHandle.Process.Parameters.Add('--dir=' + AHandle.DownloadDir);
+    AHandle.Process.Parameters.Add('--seed-time=0');
+    AHandle.Process.Parameters.Add('--file-allocation=none');
+    AHandle.Process.Parameters.Add('--allow-overwrite=true');
+    AHandle.Process.Parameters.Add('--auto-file-renaming=false');
+    AHandle.Process.Parameters.Add('--summary-interval=0');
+    AHandle.Process.Parameters.Add('--show-console-readout=false');
+    AHandle.Process.Parameters.Add('--console-log-level=warn');
+    AHandle.Process.Parameters.Add('--enable-color=false');
+    AHandle.Process.Parameters.Add('--rpc-save-upload-metadata=false');
+    AHandle.Process.Options:= [poNoConsole];
+    try
+      AHandle.Process.Execute;
+    except
+      FreeAndNil(AHandle.Process);
+      Exit(False);
+    end;
+
+    for J:= 1 to 20 do
+    begin
+      Sleep(100);
+      if JsonRpcCall(AHandle, 'aria2.getVersion', TokenParams(AHandle), Response) then
+      begin
+        Response.Free;
+        Exit(True);
+      end;
+      Response.Free;
+      Response:= nil;
+      if not AHandle.Process.Running then Break;
+    end;
+    AHandle.Process.Terminate(0);
+    FreeAndNil(AHandle.Process);
+  end;
+end;
+
+procedure StopAria2(AHandle: PTorrentHandle);
+begin
+  if AHandle.RpcUrl <> EmptyStr then
+  begin
+    if AHandle.Gid <> EmptyStr then
+      JsonRpcSimple(AHandle, 'aria2.forceRemove', GidParams(AHandle));
+    JsonRpcSimple(AHandle, 'aria2.forceShutdown', TokenParams(AHandle));
+  end;
+  if Assigned(AHandle.Process) then
+  begin
+    if AHandle.Process.Running then
+      AHandle.Process.Terminate(0);
+    FreeAndNil(AHandle.Process);
+  end;
+  AHandle.Gid:= EmptyStr;
+end;
+
+function AddTorrent(AHandle: PTorrentHandle; const SelectFiles: String): Boolean;
+var
+  Params: TJSONArray;
+  Options: TJSONObject;
+  EmptyUris: TJSONArray;
+begin
+  Params:= TokenParams(AHandle);
+  Params.Add(ReadFileBase64(AHandle.ArcName));
+  EmptyUris:= TJSONArray.Create;
+  Params.Add(EmptyUris);
+  Options:= TJSONObject.Create;
+  Options.Add('dir', AHandle.DownloadDir);
+  Options.Add('select-file', SelectFiles);
+  Options.Add('seed-time', '0');
+  Options.Add('file-allocation', 'none');
+  Options.Add('allow-overwrite', 'true');
+  Options.Add('auto-file-renaming', 'false');
+  Options.Add('bt-remove-unselected-file', 'false');
+  Params.Add(Options);
+  Result:= JsonRpcStringResult(AHandle, 'aria2.addTorrent', Params, AHandle.Gid);
+end;
+
+function SelectedItemIndexByAriaIndex(const Items: array of TTorrentBatchItem;
+                                      AriaIndex: Integer): Integer;
+var
+  I: Integer;
+begin
+  Result:= -1;
+  for I:= Low(Items) to High(Items) do
+  begin
+    if Items[I].ArchiveIndex + 1 = AriaIndex then Exit(I);
+  end;
+end;
+
+function PollTorrent(AHandle: PTorrentHandle; const Items: array of TTorrentBatchItem;
+                     TotalBytes: Int64): Integer;
+var
+  Params: TJSONArray;
+  Keys: TJSONArray;
+  Status: TJSONObject = nil;
+  Files: TJSONArray = nil;
+  FileObj: TJSONObject;
+  State: String;
+  Completed, FileCompleted, FileLength: Int64;
+  I, AriaIndex, ItemIndex, CompletedFiles: Integer;
+  TotalPercent, CurrentPercent, BestPercent, BestItemIndex: Integer;
+begin
+  Result:= E_SUCCESS;
+  while True do
+  begin
+    if AHandle.StopRequested then Exit(E_EABORTED);
+
+    Params:= TokenParams(AHandle);
+    Params.Add(AHandle.Gid);
+    Keys:= TJSONArray.Create;
+    Keys.Add('status');
+    Keys.Add('completedLength');
+    Keys.Add('errorCode');
+    Keys.Add('errorMessage');
+    Params.Add(Keys);
+    if not JsonRpcObjectResult(AHandle, 'aria2.tellStatus', Params, Status) then
+    begin
+      if AHandle.StopRequested then
+        Exit(E_EABORTED)
+      else
+        Exit(E_BAD_ARCHIVE);
+    end;
+    try
+      State:= Status.Get('status', EmptyStr);
+      Completed:= StrToInt64Def(Status.Get('completedLength', '0'), 0);
+      if TotalBytes > 0 then
+      begin
+        TotalPercent:= Completed * 100 div TotalBytes;
+        if TotalPercent > 0 then
+        begin
+          if ReportTotalPercent(AHandle, Items[0].SourceName, TotalPercent) = 0 then
+          begin
+            AHandle.StopRequested:= True;
+            StopAria2(AHandle);
+            Exit(E_EABORTED);
+          end;
+        end;
+      end;
+
+      Params:= TokenParams(AHandle);
+      Params.Add(AHandle.Gid);
+      if JsonRpcArrayResult(AHandle, 'aria2.getFiles', Params, Files) then
+      begin
+        try
+          BestPercent:= MaxInt;
+          BestItemIndex:= -1;
+          CompletedFiles:= 0;
+          for I:= 0 to Files.Count - 1 do
+          begin
+            if not (Files.Items[I] is TJSONObject) then Continue;
+            FileObj:= TJSONObject(Files.Items[I]);
+            AriaIndex:= StrToIntDef(FileObj.Get('index', '0'), 0);
+            ItemIndex:= SelectedItemIndexByAriaIndex(Items, AriaIndex);
+            if ItemIndex < 0 then Continue;
+
+            FileLength:= StrToInt64Def(FileObj.Get('length', '0'), Items[ItemIndex].Length);
+            FileCompleted:= StrToInt64Def(FileObj.Get('completedLength', '0'), 0);
+            if FileLength <= 0 then
+              CurrentPercent:= 100
+            else
+              CurrentPercent:= FileCompleted * 100 div FileLength;
+
+            if CurrentPercent >= 100 then Inc(CompletedFiles);
+
+            if (CurrentPercent < 100) and (CurrentPercent < BestPercent) then
+            begin
+              BestPercent:= CurrentPercent;
+              BestItemIndex:= ItemIndex;
+            end;
+          end;
+
+          if BestItemIndex >= 0 then
+          begin
+            if ReportCurrentPercent(AHandle, Items[BestItemIndex].SourceName, BestPercent) = 0 then
+            begin
+              AHandle.StopRequested:= True;
+              StopAria2(AHandle);
+              Exit(E_EABORTED);
+            end;
+          end
+          else if Length(Items) > 0 then
+          begin
+            if ReportCurrentPercent(AHandle, Items[High(Items)].SourceName, 100) = 0 then
+            begin
+              AHandle.StopRequested:= True;
+              StopAria2(AHandle);
+              Exit(E_EABORTED);
+            end;
+          end;
+
+          if ReportDoneFiles(AHandle, CompletedFiles) = 0 then
+          begin
+            AHandle.StopRequested:= True;
+            StopAria2(AHandle);
+            Exit(E_EABORTED);
+          end;
+        finally
+          Files.Free;
+          Files:= nil;
+        end;
+      end;
+
+      if State = 'complete' then Break;
+      if (State = 'error') or (State = 'removed') then Exit(E_BAD_ARCHIVE);
+    finally
+      Status.Free;
+    end;
+    Sleep(500);
+  end;
+
+  if TotalBytes > 0 then
+    if ReportTotalPercent(AHandle, Items[0].SourceName, 100) = 0 then
+      Result:= E_EABORTED;
+  if Result = E_SUCCESS then
+    if ReportDoneFiles(AHandle, Length(Items)) = 0 then
+      Result:= E_EABORTED;
+end;
+
+function DownloadFiles(AHandle: PTorrentHandle; const Items: array of TTorrentBatchItem): Integer;
+var
+  I: Integer;
+  AFile: TTorrentSubFile;
+  SelectFiles, SourcePath: String;
+  TotalBytes: Int64;
+begin
+  Result:= E_SUCCESS;
+  if Length(Items) = 0 then Exit;
+
+  SelectFiles:= EmptyStr;
+  TotalBytes:= 0;
+  for I:= Low(Items) to High(Items) do
+  begin
+    if SelectFiles <> EmptyStr then SelectFiles:= SelectFiles + ',';
+    SelectFiles:= SelectFiles + IntToStr(Items[I].ArchiveIndex + 1);
+    Inc(TotalBytes, Items[I].Length);
+  end;
+
+  if not StartAria2(AHandle) then Exit(E_EWRITE);
+  if not AddTorrent(AHandle, SelectFiles) then
+  begin
+    StopAria2(AHandle);
+    Exit(E_BAD_ARCHIVE);
+  end;
+
+  if AHandle.PauseRequested then
+    JsonRpcSimple(AHandle, 'aria2.forcePause', GidParams(AHandle));
+
+  Result:= PollTorrent(AHandle, Items, TotalBytes);
+  if Result <> E_SUCCESS then Exit;
+
+  for I:= Low(Items) to High(Items) do
+  begin
+    AFile:= TTorrentSubFile(AHandle.Torrent.Files[Items[I].ArchiveIndex]);
+    SourcePath:= TorrentDownloadPath(AHandle, AFile);
+    if not MoveResult(SourcePath, Items[I].DestName) then Exit(E_EWRITE);
+  end;
+end;
+
 function DownloadFile(AHandle: PTorrentHandle; AFile: TTorrentSubFile;
                       AIndex: Integer; const ADest: String): Integer;
 var
-  AProcess: TProcess;
-  ATail: String;
-  ASource: String;
-  Buffer: array[0..4095] of Byte;
-  Count, Percent: LongInt;
-  Reported, Current: Int64;
+  Items: array[0..0] of TTorrentBatchItem;
 begin
-  AProcess:= TProcess.Create(nil);
-  try
-    AProcess.Executable:= Aria2Executable;
-    AProcess.Parameters.Add('--dir=' + AHandle.DownloadDir);
-    AProcess.Parameters.Add('--select-file=' + IntToStr(AIndex));
-    AProcess.Parameters.Add('--seed-time=0');
-    AProcess.Parameters.Add('--file-allocation=none');
-    AProcess.Parameters.Add('--allow-overwrite=true');
-    AProcess.Parameters.Add('--auto-file-renaming=false');
-    AProcess.Parameters.Add('--summary-interval=1');
-    AProcess.Parameters.Add('--enable-color=false');
-    AProcess.Parameters.Add(AHandle.ArcName);
-    AProcess.Options:= [poUsePipes, poStderrToOutPut];
-
-    try
-      AProcess.Execute;
-    except
-      Exit(E_EWRITE);
-    end;
-
-    Result:= E_SUCCESS;
-    Reported:= 0;
-    while True do
-    begin
-      if AProcess.Output.NumBytesAvailable > 0 then
-      begin
-        Count:= AProcess.Output.Read(Buffer, SizeOf(Buffer));
-        if Count > 0 then
-        begin
-          SetString(ATail, PAnsiChar(@Buffer[0]), Count);
-          Percent:= ParseLastPercent(ATail);
-          if Percent >= 0 then
-          begin
-            Current:= AFile.Length * Percent div 100;
-            if Current > Reported then
-            begin
-              if ReportProgress(CeUtf8ToUtf16(ADest), Current - Reported) = 0 then
-              begin
-                AProcess.Terminate(0);
-                Exit(E_EABORTED);
-              end;
-              Reported:= Current;
-            end;
-          end;
-        end;
-      end
-      else if not AProcess.Running then
-        Break
-      else
-        Sleep(100);
-    end;
-
-    if AProcess.ExitStatus <> 0 then Exit(E_BAD_ARCHIVE);
-  finally
-    AProcess.Free;
-  end;
-
-  if AHandle.Torrent.Multifile then
-    ASource:= IncludeTrailingPathDelimiter(AHandle.DownloadDir) +
-              IncludeTrailingPathDelimiter(AHandle.Torrent.Name) +
-              AFile.Path + AFile.Name
-  else
-    ASource:= IncludeTrailingPathDelimiter(AHandle.DownloadDir) +
-              AFile.Path + AFile.Name;
-
-  if not MoveResult(ASource, ADest) then Exit(E_EWRITE);
-
-  if AFile.Length > Reported then
-    ReportProgress(CeUtf8ToUtf16(ADest), AFile.Length - Reported);
+  Items[0].ArchiveIndex:= AIndex - 1;
+  Items[0].SourceName:= AFile.Path + AFile.Name;
+  Items[0].DestName:= ADest;
+  Items[0].Length:= AFile.Length;
+  Result:= DownloadFiles(AHandle, Items);
 end;
 
 function OpenArchive(var ArchiveData : tOpenArchiveData) : TArcHandle; dcpcall;
@@ -255,6 +632,14 @@ begin
       AHandle.Index:= 0;
       AHandle.ArcName:= AFileName;
       AHandle.DownloadDir:= EmptyStr;
+      AHandle.RpcUrl:= EmptyStr;
+      AHandle.RpcSecret:= EmptyStr;
+      AHandle.Gid:= EmptyStr;
+      AHandle.Process:= nil;
+      AHandle.StopRequested:= False;
+      AHandle.PauseRequested:= False;
+      AHandle.ProcessDataProc:= nil;
+      AHandle.ProcessDataProcW:= nil;
       AHandle.Torrent:= TTorrentFile.Create;
       if not AHandle.Torrent.Load(AStream) then
         raise Exception.Create(EmptyStr);
@@ -317,12 +702,41 @@ begin
   Inc(AHandle.Index);
 end;
 
+function ProcessFilesW(hArcData: TArcHandle; Items: PWcxBatchProcessItemW; Count: Integer): Integer; dcpcall;
+var
+  I: Integer;
+  AFile: TTorrentSubFile;
+  AItems: PWcxBatchProcessItemWArray absolute Items;
+  AHandle: PTorrentHandle absolute hArcData;
+  BatchItems: array of TTorrentBatchItem;
+begin
+  Result:= E_SUCCESS;
+  if (Items = nil) or (Count <= 0) then Exit;
+
+  SetLength(BatchItems, Count);
+  for I:= 0 to Count - 1 do
+  begin
+    if (AItems^[I].ArchiveIndex < 0) or
+       (AItems^[I].ArchiveIndex >= AHandle.Torrent.Files.Count) then
+      Exit(E_BAD_ARCHIVE);
+
+    AFile:= TTorrentSubFile(AHandle.Torrent.Files[AItems^[I].ArchiveIndex]);
+    BatchItems[I].ArchiveIndex:= AItems^[I].ArchiveIndex;
+    BatchItems[I].SourceName:= CeUtf16ToUtf8(UnicodeString(AItems^[I].SourceName));
+    BatchItems[I].DestName:= CeUtf16ToUtf8(UnicodeString(AItems^[I].DestName));
+    BatchItems[I].Length:= AFile.Length;
+  end;
+
+  Result:= DownloadFiles(AHandle, BatchItems);
+end;
+
 function CloseArchive (hArcData : TArcHandle) : Integer; dcpcall;
 var
   AHandle: PTorrentHandle absolute hArcData;
 begin
   if hArcData <> wcxInvalidHandle then
   begin
+    StopAria2(AHandle);
     if (System.Length(AHandle.DownloadDir) > 0) and mbFileExists(AHandle.DownloadDir) then
       DeleteTree(AHandle.DownloadDir);
     AHandle.Torrent.Free;
@@ -337,13 +751,48 @@ begin
 end;
 
 procedure SetProcessDataProc (hArcData : TArcHandle; pProcessDataProc : TProcessDataProc); dcpcall;
+var
+  AHandle: PTorrentHandle absolute hArcData;
 begin
-  gProcessDataProc:= pProcessDataProc;
+  if hArcData <> wcxInvalidHandle then
+    AHandle.ProcessDataProc:= pProcessDataProc;
 end;
 
 procedure SetProcessDataProcW (hArcData : TArcHandle; pProcessDataProc : TProcessDataProcW); dcpcall;
+var
+  AHandle: PTorrentHandle absolute hArcData;
 begin
-  gProcessDataProcW:= pProcessDataProc;
+  if hArcData <> wcxInvalidHandle then
+    AHandle.ProcessDataProcW:= pProcessDataProc;
+end;
+
+procedure PauseProcessFiles(hArcData: TArcHandle); dcpcall;
+var
+  AHandle: PTorrentHandle absolute hArcData;
+begin
+  if hArcData = wcxInvalidHandle then Exit;
+  AHandle.PauseRequested:= True;
+  if AHandle.Gid <> EmptyStr then
+    JsonRpcSimple(AHandle, 'aria2.forcePause', GidParams(AHandle));
+end;
+
+procedure ResumeProcessFiles(hArcData: TArcHandle); dcpcall;
+var
+  AHandle: PTorrentHandle absolute hArcData;
+begin
+  if hArcData = wcxInvalidHandle then Exit;
+  AHandle.PauseRequested:= False;
+  if AHandle.Gid <> EmptyStr then
+    JsonRpcSimple(AHandle, 'aria2.unpause', GidParams(AHandle));
+end;
+
+procedure StopProcessFiles(hArcData: TArcHandle); dcpcall;
+var
+  AHandle: PTorrentHandle absolute hArcData;
+begin
+  if hArcData = wcxInvalidHandle then Exit;
+  AHandle.StopRequested:= True;
+  StopAria2(AHandle);
 end;
 
 function GetPackerCaps : Integer;dcpcall;
@@ -358,10 +807,14 @@ exports
   ReadHeaderExW,
   ProcessFile,
   ProcessFileW,
+  ProcessFilesW,
   CloseArchive,
   SetChangeVolProc,
   SetProcessDataProc,
   SetProcessDataProcW,
+  PauseProcessFiles,
+  ResumeProcessFiles,
+  StopProcessFiles,
   GetPackerCaps;
 
 begin

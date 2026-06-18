@@ -34,6 +34,8 @@ type
   TOpenArchiveW = function (var ArchiveData : tOpenArchiveDataW): TArcHandle;
   TReadHeaderExW = function (hArcData: TArcHandle; var HeaderDataExW : THeaderDataExW): Integer;
   TProcessFileW = function  (hArcData: TArcHandle;  Operation: Integer; DestPath, DestName: PWideChar): Integer;
+  TProcessFilesW = function (hArcData: TArcHandle; Items: PWcxBatchProcessItemW; Count: Integer): Integer;
+  TControlProcessFiles = procedure (hArcData: TArcHandle);
   TSetChangeVolProcW = procedure (hArcData: TArcHandle; ChangeVolProc: tChangeVolProcW);
   TSetProcessDataProcW = procedure (hArcData: TArcHandle; ProcessDataProc: TProcessDataProcW);
   TPackFilesW = function (PackedFile, SubPath, SrcPath, AddList: PWideChar; Flags: Integer): Integer;
@@ -47,4 +49,3 @@ type
 implementation
 
 end.
-

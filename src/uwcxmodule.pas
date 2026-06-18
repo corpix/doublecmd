@@ -111,6 +111,10 @@ Type
     OpenArchiveW: TOpenArchiveW;
     ReadHeaderExW: TReadHeaderExW;
     ProcessFileW: TProcessFileW;
+    ProcessFilesW: TProcessFilesW;
+    PauseProcessFiles: TControlProcessFiles;
+    ResumeProcessFiles: TControlProcessFiles;
+    StopProcessFiles: TControlProcessFiles;
     SetChangeVolProcW: TSetChangeVolProcW;
     SetProcessDataProcW:TSetProcessDataProcW;
     PackFilesW: TPackFilesW;
@@ -136,6 +140,11 @@ Type
 
     function OpenArchiveHandle(FileName: String; anOpenMode: Longint; out OpenResult: Longint): TArcHandle;
     function WcxProcessFile(hArcData: TArcHandle; Operation: LongInt; DestPath, DestName: String): LongInt;
+    function WcxCanProcessFiles: Boolean;
+    function WcxProcessFiles(hArcData: TArcHandle; Items: PWcxBatchProcessItemW; Count: Integer): LongInt;
+    procedure WcxPauseProcessFiles(hArcData: TArcHandle);
+    procedure WcxResumeProcessFiles(hArcData: TArcHandle);
+    procedure WcxStopProcessFiles(hArcData: TArcHandle);
     function WcxPackFiles(PackedFile, SubPath, SrcPath, AddList: String; Flags: LongInt): LongInt;
     function WcxDeleteFiles(PackedFile, DeleteList: String): LongInt;
     function WcxCanYouHandleThisFile(FileName: String): LongBool;
@@ -319,6 +328,38 @@ begin
     end;
 end;
 
+function TWcxModule.WcxCanProcessFiles: Boolean;
+begin
+  Result:= Assigned(ProcessFilesW);
+end;
+
+function TWcxModule.WcxProcessFiles(hArcData: TArcHandle;
+  Items: PWcxBatchProcessItemW; Count: Integer): LongInt;
+begin
+  if Assigned(ProcessFilesW) then
+    Result:= ProcessFilesW(hArcData, Items, Count)
+  else
+    Result:= E_NOT_SUPPORTED;
+end;
+
+procedure TWcxModule.WcxPauseProcessFiles(hArcData: TArcHandle);
+begin
+  if Assigned(PauseProcessFiles) then
+    PauseProcessFiles(hArcData);
+end;
+
+procedure TWcxModule.WcxResumeProcessFiles(hArcData: TArcHandle);
+begin
+  if Assigned(ResumeProcessFiles) then
+    ResumeProcessFiles(hArcData);
+end;
+
+procedure TWcxModule.WcxStopProcessFiles(hArcData: TArcHandle);
+begin
+  if Assigned(StopProcessFiles) then
+    StopProcessFiles(hArcData);
+end;
+
 function TWcxModule.WcxPackFiles(PackedFile, SubPath, SrcPath,
   AddList: String; Flags: LongInt): LongInt;
 begin
@@ -459,6 +500,10 @@ begin
   // Unicode
   SetChangeVolProcW:= TSetChangeVolProcW(GetProcAddress(FModuleHandle,'SetChangeVolProcW'));
   SetProcessDataProcW:= TSetProcessDataProcW(GetProcAddress(FModuleHandle,'SetProcessDataProcW'));
+  ProcessFilesW:= TProcessFilesW(GetProcAddress(FModuleHandle,'ProcessFilesW'));
+  PauseProcessFiles:= TControlProcessFiles(GetProcAddress(FModuleHandle,'PauseProcessFiles'));
+  ResumeProcessFiles:= TControlProcessFiles(GetProcAddress(FModuleHandle,'ResumeProcessFiles'));
+  StopProcessFiles:= TControlProcessFiles(GetProcAddress(FModuleHandle,'StopProcessFiles'));
   PackFilesW:= TPackFilesW(GetProcAddress(FModuleHandle,'PackFilesW'));
   DeleteFilesW:= TDeleteFilesW(GetProcAddress(FModuleHandle,'DeleteFilesW'));
   StartMemPackW:= TStartMemPackW(GetProcAddress(FModuleHandle,'StartMemPackW'));
@@ -525,6 +570,10 @@ begin
   OpenArchiveW:= nil;
   ReadHeaderExW:= nil;
   ProcessFileW:= nil;
+  ProcessFilesW:= nil;
+  PauseProcessFiles:= nil;
+  ResumeProcessFiles:= nil;
+  StopProcessFiles:= nil;
   SetChangeVolProcW:= nil;
   SetProcessDataProcW:= nil;
   PackFilesW:= nil;
