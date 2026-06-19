@@ -40,8 +40,124 @@
         ];
 
         qtPluginPath = "${pkgs.libsForQt5.qtbase.bin}/${pkgs.libsForQt5.qtbase.qtPluginPrefix}";
+
+        unrarPackage =
+          if pkgs.config.allowUnfree or false then
+            pkgs.unrar
+          else
+            null;
+
+        doublecmd = pkgs.stdenv.mkDerivation (finalAttrs: {
+          pname = "doublecmd";
+          version = "dev";
+
+          src = self;
+
+          nativeBuildInputs = with pkgs; [
+            fpc
+            getopt
+            lazarus
+            libsForQt5.wrapQtAppsHook
+            writableTmpDirAsHomeHook
+          ];
+
+          buildInputs = runtimeLibs;
+
+          env.NIX_LDFLAGS = "--as-needed -rpath ${lib.makeLibraryPath finalAttrs.buildInputs}";
+
+          postPatch = ''
+            patchShebangs build.sh install/linux/install.sh
+            substituteInPlace build.sh \
+              --replace-warn '$(which lazbuild)' '"${pkgs.lazarus}/bin/lazbuild --lazarusdir=${pkgs.lazarus}/share/lazarus"'
+            substituteInPlace install/linux/install.sh \
+              --replace-warn '$DC_INSTALL_PREFIX/usr' '$DC_INSTALL_PREFIX'
+            substituteInPlace plugins/wcx/sevenzip/src/platform/sevenziphlp.pas \
+              --replace-fail "'/usr/lib/7zip/'" "'${pkgs.p7zip.lib}/lib/p7zip/'"
+            substituteInPlace plugins/wcx/sevenzip/src/platform/unix/activex.pas \
+              --replace-fail '{.$define Z7_USE_VIRTUAL_DESTRUCTOR_IN_IUNKNOWN}' '{$define Z7_USE_VIRTUAL_DESTRUCTOR_IN_IUNKNOWN}'
+          '';
+
+          buildPhase = ''
+            runHook preBuild
+
+            ./build.sh release qt5
+
+            runHook postBuild
+          '';
+
+          postBuild = ''
+            dcLazbuild() {
+              lazbuild \
+                --lazarusdir=${pkgs.lazarus}/share/lazarus \
+                --widgetset=qt5 \
+                "$@"
+            }
+
+            dcLazbuild plugins/wcx/torrent/src/torrent.lpi
+            dcLazbuild plugins/wdx/textline/src/TextLine.lpi
+
+            echo "=== produced plugin artifacts ==="
+            find plugins -type f \
+              \( -name '*.wcx' -o -name '*.wdx' -o -name '*.wfx' \
+                 -o -name '*.wlx' -o -name '*.dsx' \) -print | sort
+            echo "================================="
+          '';
+
+          installPhase = ''
+            runHook preInstall
+
+            install/linux/install.sh -I $out
+
+            runHook postInstall
+          '';
+
+          postInstall = ''
+            pluginDir=$(echo "$out"/lib*/doublecmd/plugins)
+
+            while IFS= read -r artifact; do
+              base=$(basename "$artifact")
+              ext=''${base##*.}
+              name=''${base%.*}
+              if [ -z "$(find "$pluginDir/$ext" -name "$base" 2>/dev/null)" ]; then
+                echo "installing missing plugin: $base -> $pluginDir/$ext/$name/"
+                install -Dm644 "$artifact" "$pluginDir/$ext/$name/$base"
+              fi
+            done < <(find plugins -type f \
+              \( -name '*.wcx' -o -name '*.wdx' -o -name '*.wfx' \
+                 -o -name '*.wlx' -o -name '*.dsx' \))
+          '';
+
+          preFixup = ''
+            qtWrapperArgs+=(
+              --prefix LD_LIBRARY_PATH : ${
+                lib.makeLibraryPath (
+                  [
+                    pkgs.libssh2
+                    pkgs.openssl
+                  ]
+                  ++ lib.optional (unrarPackage != null) unrarPackage
+                )
+              }
+              --prefix PATH : ${lib.makeBinPath [ pkgs.aria2 ]}
+            )
+          '';
+
+          meta = {
+            homepage = "https://doublecmd.sourceforge.io/";
+            description = "Two-panel graphical file manager written in Pascal";
+            license = lib.licenses.gpl2Plus;
+            mainProgram = "doublecmd";
+            maintainers = [ ];
+            platforms = lib.platforms.linux;
+          };
+        });
       in
       {
+        packages = {
+          inherit doublecmd;
+          default = doublecmd;
+        };
+
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             fpc
